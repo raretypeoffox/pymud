@@ -101,6 +101,15 @@ RACES = {
   'Auroran': [10, 10, 12, 11, 13, 10, 1000, ['holy light', 'holy shield']]
 }
 
+RACES_ABV = {
+  'Cragkin': 'Crag',
+  'Moonshade': 'Moon',
+  'Etherial': 'Ether',
+  'Starfolk': 'Star',
+  'Frostling': 'Frost',
+  'Auroran': 'Auro'
+}
+
 
 ORIGIN_MSG = """
 Please choose from one of the following origins:
@@ -158,22 +167,23 @@ ORIGINS = [
 #define ITEM_HOLD		  16384
 
 EQ_SLOTS = {
-  1: "held in inventory",
-  2: "worn on finger",
-  4: "worn on neck",
-  8: "worn on body",
-  16: "worn on head",
-  32: "worn on legs",
-  64: "worn on feet",
-  128: "worn on hands",
-  256: "worn on arms",
-  512: "held in offhand",
-  1024: "worn about body",
-  2048: "worn about waist",
-  4096: "worn on wrist",
-  8192: "wielded",
-  16384: "held"
+  1: "<held in inventory>",
+  2: "<worn on finger>",
+  4: "<worn on neck>",
+  8: "<worn on body>",
+  16: "<worn on head>",
+  32: "<worn on legs>",
+  64: "<worn on feet>",
+  128: "<worn on hands>",
+  256: "<worn on arms>",
+  512: "<held in offhand>",
+  1024: "<worn about body>",
+  2048: "<worn about waist>",
+  4096: "<worn on wrist>",
+  8192: "<wielded>",
+  16384: "<held>"
 }
+
 
 
 #define ITEM_LIGHT		      1

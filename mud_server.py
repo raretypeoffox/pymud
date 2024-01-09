@@ -28,7 +28,11 @@ def start_server(port=4000):
            
 def game_loop(server_socket):
     server_socket.settimeout(0.1)
+    
+    
     while True:
+        
+        
         # Accept new connections
         try:
             client_sock, addr = server_socket.accept()

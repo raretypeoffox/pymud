@@ -19,6 +19,8 @@ class PlayerDatabase:
                 name TEXT PRIMARY KEY,
                 current_room TEXT,
                 current_recall TEXT,
+                created TEXT,
+                lastlogin TEXT,
                 character BLOB
             )
         ''')
@@ -28,36 +30,43 @@ class PlayerDatabase:
         with self.lock:
             character_data = pickle.dumps(player.character)
             self.cursor.execute('''
-                INSERT OR REPLACE INTO players (name, current_room, current_recall, character)
-                VALUES (?, ?, ?, ?)
-            ''', (player.name.lower(), player.current_room, player.current_recall, character_data))
+                INSERT OR REPLACE INTO players (name, current_room, current_recall, created, lastlogin, character)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (player.name, player.current_room, player.current_recall, player.created, player.lastlogin, character_data))
             self.connection.commit()
 
     def load_player(self, name):
         with self.lock:
             self.cursor.execute('''
-                SELECT current_room, current_recall, character FROM players WHERE name = ?
+            SELECT current_room, current_recall, created, lastlogin, character FROM players WHERE LOWER(name) = LOWER(?)
             ''', (name.lower(),))
             result = self.cursor.fetchone()
             if result is None:
                 log_error(f"Error loading player data for {name}")
                 return None
-            current_room, current_recall, character_data = result
-            character = pickle.loads(character_data)
-            return {'name': name, 'current_room': current_room, 'current_recall': current_recall, 'character': character}
-
-    def get_last_login(self, name):
+            else:
+                current_room, current_recall, created, lastlogin, character_data = result
+                character = pickle.loads(character_data)
+                return {
+                'name': name,
+                'current_room': current_room,
+                'current_recall': current_recall,
+                'created': created,
+                'lastlogin': lastlogin,
+                'character': character
+                }
+    
+    def get_player_created_lastlogin(self, name):
         with self.lock:
             self.cursor.execute('''
-                SELECT character FROM players WHERE name = ?
+                SELECT created, lastlogin FROM players WHERE LOWER(name) = LOWER(?)
             ''', (name.lower(),))
             result = self.cursor.fetchone()
             if result is None:
                 return None
-            character_data = result[0]
-            character = pickle.loads(character_data)
-            return character.lastlogin
-    
+            else:
+                created, lastlogin = result
+                return datetime.strptime(created, '%Y-%m-%d %H:%M:%S.%f'), datetime.strptime(lastlogin, '%Y-%m-%d %H:%M:%S.%f')
     
 player_db = PlayerDatabase('player_database.db')
 
@@ -71,14 +80,17 @@ class PlayerManager:
     def remove_player(self, player):
         try:
             self.players.remove(player)
+            return True
         except ValueError:
-            pass
+            return False
         
     def get_players(self):
         return self.players
 
     def get_player_by_name(self, name):
         for player in self.players:
+            if player.name is None:
+                continue
             if player.name.lower() == name.lower():
                 return player
         return None
@@ -97,7 +109,7 @@ class PlayerManager:
         player.save()
             
         # Remove the player from the list of connected players
-        self.remove_player(player)
+        return self.remove_player(player)
 
 
 
@@ -113,7 +125,10 @@ class Player:
         self.name = None
         self.current_room = 3001
         self.current_recall = 0
-        self.character = PlayerCharacter()
+        self.character = Character()
+        
+        self.created = datetime.now()
+        self.lastlogin = datetime.now()
 
     def save(self):
         player_db.save_player(self)
@@ -124,8 +139,9 @@ class Player:
             return False
         self.current_room = int(player_data['current_room'])
         self.current_recall = int(player_data['current_recall'])
+        self.created = player_data['created']
+        self.lastlogin = datetime.now()
         self.character = player_data['character']
-        self.character.lastlogin = datetime.now()
         return True
     
     def save_exists(self):
@@ -142,13 +158,25 @@ class Player:
         
     def get_prompt(self):
         return self.character.get_prompt()
+    
+    def get_hitroll(self):
+        return self.character.hitroll
+    
+    def get_damroll(self):
+        return 1, 4, (self.character.str - 10)
+        # return self.character.damroll_dice, self.character.damroll_size, self.character.damroll_bonus
+    
+    
+    def get_AC(self):
+        return self.character.ac
         
-class PlayerCharacter:
-    def __init__(self):
+class Character:
+    def __init__(self, NPC=False):
         self.level = 1
         self.race = ""
-        self.origin = ""    
-        
+        self.origin = ""
+            
+        self.NPC = NPC
         self.inventory = []
         self.equipment = Equipment()
         self.max_hitpoints = 30
@@ -158,22 +186,23 @@ class PlayerCharacter:
         self.max_stamina = 100
         self.current_stamina = self.max_stamina
         
-        self.str = 0
-        self.dex = 0
-        self.con = 0
-        self.int = 0
-        self.wis = 0
-        self.cha = 0
+        self.position = "Standing"
+        
+        self.str = 10
+        self.dex = 10
+        self.con = 10
+        self.int = 10
+        self.wis = 10
+        self.cha = 10
+        
+        self.ac = 12
+        self.hitroll = 2 
         
         self.xp = 0
         self.tnl = 1000
         self.gold = 0
         
         self.racials = []
-        
-        
-        self.created = datetime.now()
-        self.lastlogin = datetime.now()
         
     def get_prompt(self):
         c = colourize
@@ -189,8 +218,33 @@ class PlayerCharacter:
         self.tnl = tnl
         self.racials = racials
         
-
+    def get_hitroll(self):
+        return self.hitroll + self.dex - 10
+    
+    def get_AC(self):
+        return self.ac
+    
+    def get_damroll(self):
+        return 1, 4, (self.str - 10)
+    
+    def get_hp_pct(self):
+        return (self.current_hitpoints / self.max_hitpoints)
+    
+    def apply_damage(self, damage):
+        self.current_hitpoints -= damage
         
+    def is_dead(self):
+        return self.current_hitpoints <= 0
+
+    
+    
+    # for debugging
+    def __str__(self):
+        str = f"Level: {self.level}, Race: {self.race}, Origin: {self.origin}\n"
+        str += f"Str: {self.str}, Dex: {self.dex}, Con: {self.con}, Int: {self.int}, Wis: {self.wis}, Cha: {self.cha}\n"
+        str += f"Hitroll: {self.hitroll}, AC: {self.ac}"
+        str += self.get_prompt()
+        return str
         
 class Equipment:
     def __init__(self):
@@ -237,7 +291,7 @@ class Equipment:
         if self.get_equipped_items():
             msg = ""
             for item in self.get_equipped_items():
-                msg += colourize(f"<{mud_consts.EQ_SLOTS[int(item.template.wear_flags)] + ">": <20}{item.template.short_description}\n", "yellow")
+                msg += colourize(f"{mud_consts.EQ_SLOTS[int(item.template.wear_flags)]: <20}{item.template.short_description}\n", "yellow")
             return msg
         else:
             return None
@@ -433,11 +487,20 @@ class Room:
             mob_keywords.append(mob.template.keywords)
         return mob_keywords
     
+    def get_mob_keywords_and_instances(self):
+        mob_keywords = []
+        for mob in self.mob_list:
+            mob_keywords.append((mob.template.keywords, mob))
+        return mob_keywords
+    
     def get_mob_description_by_keyword(self, keyword):
         for mob in self.mob_list:
             if keyword in mob.template.keywords:
                 return mob.get_description()
         return None
+    
+    def get_mob_instances(self):
+        return self.mob_list
     
     def get_door_keywords(self):
         door_keywords = []
@@ -513,6 +576,7 @@ class MobInstanceManager:
 class MobInstance:
     def __init__(self, template):
         self.template = template
+        self.name = self.template.short_desc.upper()[0] + self.template.short_desc[1:]
         self.current_room = None
         
         self.max_hitpoints = dice_roll(template.hitdice_num, template.hitdice_size, template.hitdice_bonus)
@@ -520,7 +584,9 @@ class MobInstance:
         self.max_mana = 100
         self.current_mana = self.max_mana
         
+        self.character = Character(NPC=True)
         
+        # todo move equipment and inventory to character
         self.equipment = Equipment()
         self.inventory = []
         
@@ -545,12 +611,21 @@ class MobInstance:
         if self.inventory:
             description.append("You peek into their inventory and see:")
             for item in self.inventory:
-                description.append(f"\t{item.name}")
+                description.append(f"\t{item.template.short_description}")
         
         return "\n".join(description)
         
     def add_item(self, item):
         self.inventory.append(item)
+        
+    def get_hitroll(self):
+        return self.template.hitroll
+    
+    def get_AC(self):
+        return self.template.ac
+    
+    def get_damroll(self):
+        return self.template.damdice_num, self.template.damdice_size, self.template.damdice_bonus
         
         
 class ObjectInstanceManager:

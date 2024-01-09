@@ -1,12 +1,40 @@
 # mud_handler.py
 import difflib
 from functools import partial
+from datetime import datetime
 
 import mud_consts
 from mud_comms import send_message, send_room_message, player_manager, handle_disconnection
 from mud_shared import colourize, match_keyword
 
 from mud_world import room_manager
+from mud_objects import player_db
+from mud_combat import test_kill_mob
+
+def kill_command(player, argument):
+    if argument == '':
+        send_message(player, "You must specify a mob name.\n")
+        return
+    
+    room_instance = room_manager.get_room_by_vnum(player.current_room)
+    # compare argument against mob keywords in room and if there's a match, return instance
+    mob_list = room_instance.get_mob_keywords_and_instances()
+
+    target_mob = None
+    for keywords, mob_instance in mob_list:
+        print(keywords, mob_instance, argument)
+        if match_keyword(keywords, argument):
+            target_mob = mob_instance
+            break
+
+    if target_mob is None:
+        send_message(player, "No mob with that name found.\n")
+    else:
+        # Proceed with the combat
+        test_kill_mob(player, target_mob)
+    
+    
+
 
 def say_command(player, argument):
     if argument == '':
@@ -44,13 +72,38 @@ def score_command(player, argument):
     
          
 def who_command(player, argument):
-    send_message(player, "Players currently online:\n")
+    send_message(player, colourize("Heroes...\n", "green"))
+    send_message(player, colourize("---------\n", "green"))
+    count = 0
     for other_player in player_manager.get_players():
-        if other_player != player:
-            send_message(player, f"{other_player.name}\n")
+        send_message(player, colourize(f"[{other_player.character.level : >4} {mud_consts.RACES_ABV[other_player.character.race]: <5}] {other_player.name}, {other_player.character.origin}\n", "green"))
+        count += 1
+    send_message(player, colourize(f"\n{count} players online.\n", "green"))
+
+def last_command(player, argument):
+    if argument == '':
+        send_message(player, "You must specify a player name.\n")
+        return
+    
+    result = player_db.get_player_created_lastlogin(argument)
+    if result is None:
+        send_message(player, f"No player with the name {argument} found.")
+    else:
+        created, lastlogin = result
+        today = datetime.now().date()
+
+        if created.date() == today:
+            formatted_created = "today"
         else:
-            send_message(player, f"{other_player.name} (you)\n")
-            
+            formatted_created = created.strftime("%B %d, %Y")
+
+        if lastlogin.date() == today:
+            formatted_lastlogin = "today"
+        else:
+            formatted_lastlogin = lastlogin.strftime("%B %d, %Y")
+
+        send_message(player, f'Player was created {formatted_created} and last logged in {formatted_lastlogin}\n')
+                   
 def quit_command(player, argument):
     handle_disconnection(player, "Goodbye! Hope to see you soon...\n")
 
@@ -107,7 +160,7 @@ def look_command(player, argument):
             send_message(player, f"{colourize(room_instance.name,"yellow")}\n{exit_names}\n{room_instance.description}")
             player_names = room_instance.get_player_names(excluding_player=player)
             if player_names != '':
-                player_names_str = ''.join('\t' + name for name in player_names)
+                player_names_str = '\n'.join('\t' + name for name in player_names)
                 send_message(player, f"{player_names_str}\n")
             mob_names = room_instance.get_mob_names()
             if mob_names != '':
@@ -194,9 +247,11 @@ def cmds_command(player, argument):
         send_message(player, f"{cmds}\n")
 
 commands = {
+    'kill': kill_command, 
     'say': say_command,
     'chat' : chat_command,
     'who': who_command,
+    'last': last_command,
     'score': score_command,
     'recall': recall_command,
     'quit': quit_command,
@@ -232,6 +287,7 @@ def handle_player(player, msg):
         'w': 'west',
         'u': 'up',
         'd': 'down',
+        'l': 'look',
         # Add more shortcuts here...
     }
 

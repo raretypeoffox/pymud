@@ -78,14 +78,22 @@ def dice_roll(num, size, bonus):
     for i in range(num):
         total += random.randint(1, size)
     return total + bonus
+
+def random_percent():
+    return round(random.uniform(0,1), 4)
     
 def match_keyword(keywords, user_input):
     ''' Attempts to match user input against a list of keywords.
     Returns the first match if found, otherwise returns None.
     '''
+    if isinstance(keywords, list) == False:
+        keywords = [keywords]
+    
     user_input = user_input.lower()
     for keyword in keywords:
+        print(keyword)
         if keyword.lower().startswith(user_input):
             return keyword
     return None
+
    

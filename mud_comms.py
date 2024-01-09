@@ -105,7 +105,7 @@ def handle_password_verification(player, msg):
 def handle_race_set(player, msg):
     comp = msg.strip().lower().rstrip("s")
     matching_races = [race for race in mud_consts.RACES if comp in race.lower()]
-    if matching_races:
+    if matching_races and comp != '':
         player.character.race = matching_races[0].capitalize()
         player.character.set_racial_stats(*mud_consts.RACES[player.character.race])
         player.awaiting_race = False
@@ -140,7 +140,7 @@ def finish_login(player, msg, log_msg):
     player.load()
     send_message(player, msg)
     log_info(log_msg)
-    send_global_message(colourize(f"[INFO: {player.name} has entered the game.]\n", "red"))
+    send_global_message(colourize(f"[INFO]: {player.name} has entered the game.\n", "red"))
     send_room_message(player.current_room, colourize(f"{player.name} suddenly appears in the room.\n", "green"), player)
     del player.reconnect_prompt
     del player.awaiting_reconnect_confirmation
@@ -149,13 +149,16 @@ def finish_login(player, msg, log_msg):
     
             
 def handle_disconnection(player, msg=""):
+    if player is None:
+        return
     print(f"{player.fd}: Player {player.name} disconnected: {msg}")
     log_info(f"{player.name} disconnected: {msg}")
     new_room_instance = room_manager.get_room_by_vnum(player.current_room)
     new_room_instance.remove_player(player)   
-    player_manager.disconnect_player(player, msg)
+    if player_manager.disconnect_player(player, msg) and player.name != None:
+       send_global_message(colourize(f"[INFO]: {player.name} has left the game.\n", "red")) 
     player.socket.close()
-    send_global_message(colourize(f"[INFO: {player.name} has left the game.]\n", "red"))
+    
         
 def handle_new_client(client_socket):
     player = Player(client_socket.fileno())
