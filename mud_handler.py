@@ -22,7 +22,6 @@ def kill_command(player, argument):
 
     target_mob = None
     for keywords, mob_instance in mob_list:
-        print(keywords, mob_instance, argument)
         if match_keyword(keywords, argument):
             target_mob = mob_instance
             break

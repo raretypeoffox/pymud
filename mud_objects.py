@@ -4,6 +4,7 @@ import sqlite3
 import threading
 import pickle
 from datetime import datetime
+import time
 
 from mud_shared import dice_roll, colourize, log_info, log_error
 import mud_consts
@@ -188,6 +189,9 @@ class Character:
         
         self.position = "Standing"
         
+        self.combat_with = set()
+        self.current_target = None
+        
         self.str = 10
         self.dex = 10
         self.con = 10
@@ -204,6 +208,7 @@ class Character:
         
         self.racials = []
         
+
     def get_prompt(self):
         c = colourize
         return c("\n<HP: ", "green") + c(f"{self.current_hitpoints}", "white") + c(f"/{self.max_hitpoints}", "green") + c(" MP: ", "green") + c(f"{self.current_mana}", "white") + c(f"/{self.max_mana}", "green") + c(" SP: ", "green") + c(f"{self.current_stamina}", "white") + c(f"/{self.max_stamina}", "green") + c("> \n", "green")
@@ -217,7 +222,7 @@ class Character:
         self.cha = cha
         self.tnl = tnl
         self.racials = racials
-        
+          
     def get_hitroll(self):
         return self.hitroll + self.dex - 10
     
@@ -664,4 +669,57 @@ class ObjectInstance:
             self.current_room.remove_object(self)
         new_room.add_object(self)
         self.current_room = new_room  
+
+class CombatManager:
+    def __init__(self):
+        self.combat_dict = {}
+        self.current_target = {}
+        self.last_update = time.time()
+
+    def start_combat(self, character, target):
+        print(f"Starting combat: character={character}, target={target}")
+        if character not in self.combat_dict:
+            self.combat_dict[character] = set()
+        self.combat_dict[character].add(target)
+        if character not in self.current_target:
+            self.current_target[character] = target
+        print(f"Combat dict after starting combat: {self.combat_dict}")
+
+    def end_combat(self, character, target):
+        if character in self.combat_dict:
+            self.combat_dict[character].discard(target)
+            if not self.combat_dict[character]:
+                del self.combat_dict[character]
+        if character in self.current_target and self.current_target[character] == target:
+            del self.current_target[character]
+
+    def is_in_combat_with(self, character, target):
+        return character in self.combat_dict and target in self.combat_dict[character]
+
+    def get_combat_targets(self, character):
+        return self.combat_dict.get(character, set())
+
+    def in_combat(self, character):
+        return character in self.combat_dict and len(self.combat_dict[character]) > 0
+
+    def end_all_combat(self, character):
+        if character in self.combat_dict:
+            self.combat_dict[character] = set()
+        if character in self.current_target:
+            del self.current_target[character]
+
+    def get_current_target(self, character):
+        return self.current_target.get(character)
+    
+    def get_characters_in_combat(self):
+        return list(self.combat_dict.keys())
+    
+    def next_round(self):
+        ROUNDS_IN_MILLISECONDS = 2000
+        elapsed_time_ms = (time.time() - self.last_update) * 1000
+        if elapsed_time_ms > ROUNDS_IN_MILLISECONDS:
+            self.last_update = time.time()
+            return True
+        else:
+            return False
         

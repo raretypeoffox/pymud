@@ -10,6 +10,7 @@ from mud_comms import handle_new_client, handle_shutdown, player_manager, handle
 from mud_handler import handle_player
 from mud_world import build_world, reset_world
 from mud_shared import log_info, log_error
+from mud_combat import combat_loop
 
 def log_client_input(player, msg):
     print(f"{player.fd}: Received: {msg.rstrip()}")              
@@ -68,7 +69,11 @@ def game_loop(server_socket):
         time.sleep(0.1)
         
 def update_game_state():
-    pass
+    
+    combat_loop()
+            
+
+        
 
 
 def shutdown_handler(signum, frame):

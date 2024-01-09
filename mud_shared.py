@@ -91,7 +91,6 @@ def match_keyword(keywords, user_input):
     
     user_input = user_input.lower()
     for keyword in keywords:
-        print(keyword)
         if keyword.lower().startswith(user_input):
             return keyword
     return None

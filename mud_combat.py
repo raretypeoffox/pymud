@@ -1,12 +1,14 @@
+import time
 
-#for while we're testing
-from mud_world import build_world, reset_world
 from mud_shared import log_info, log_error, dice_roll, random_percent, colourize
 
 
 from mud_world import room_manager
-from mud_objects import Player
+from mud_comms import player_manager
 import mud_consts
+
+from mud_objects import CombatManager
+combat_manager = CombatManager()
 
 from mud_comms import send_message
 # used for testing remove for full program
@@ -33,11 +35,19 @@ def deal_damage(attacker, defender, damage, msg, type=0):
     defender.character.apply_damage(damage)
     
     if defender.character.is_dead():
+        combat_manager.end_combat(attacker, defender)
+        combat_manager.end_combat(defender, attacker)
         if defender == NPC:
             msg += f"{defender.name} is dead!\n"
+            msg += PC.get_prompt()
         elif attacker == NPC:
             msg += f"You are dead!\n"
-            # do PC death stuff here
+            
+            # TODO PC Death
+            msg += "\n\n\nYou are magically healed!"
+            PC.character.current_hitpoints = PC.character.max_hitpoints
+            msg += PC.get_prompt()
+            
         else:
             log_error("Unexpected result, neither PC nor NPC!")
             return
@@ -82,9 +92,7 @@ def one_hit(attacker, defender, type=0):
         
         if damage <= 0:
             damage = 1
-            
-        
-        
+   
     else:
         msg = f"{attacker.name} misses {defender.name}!\n"
 
@@ -108,28 +116,16 @@ def multi_hit(attacker, defender, type=0):
         one_hit(attacker, defender, type)
 
 def combat_round(combatant_one, combatant_two):
-    
-    # Inititive roll
-    # later, change 2 to be a function of dexterity
-    combatant_one_init = dice_roll(1, 20, combatant_one.character.dex - 10)
-    combatant_two_init = dice_roll(1, 20, combatant_two.character.dex - 10)
-    
-    if combatant_one_init > combatant_two_init:
-        # combatant_one goes first
-        multi_hit(combatant_one, combatant_two)
-        # if alive, combatant_two goes second
-        multi_hit(combatant_two, combatant_one)
-    else:
-        # combatant_two goes first
-        multi_hit(combatant_two, combatant_one)
-        # if alive, combatant_one goes second
-        multi_hit(combatant_one, combatant_two)
+        
+    multi_hit(combatant_one, combatant_two)
        
     PC, NPC = return_PC_and_NPC(combatant_one, combatant_two)
     
     if PC.character.is_dead() or NPC.character.is_dead():
         return
     
+
+def report_mob_health(PC, NPC):
     hp_pct = NPC.character.get_hp_pct()
     if hp_pct == 1:
         msg =  f"{NPC.name} is in full health!\n"
@@ -146,37 +142,36 @@ def combat_round(combatant_one, combatant_two):
         
     send_message(PC, colourize(msg, "yellow"))
 
+
 def test_kill_mob(player, mob):
-    while player.character.is_dead() is False and mob.character.is_dead() is False:
-        combat_round(player, mob)
-        send_message(player, player.get_prompt() + "\n")
-
-    if player.character.is_dead():
-        print("You are magically healed!")
-        player.character.current_hitpoints = player.character.max_hitpoints
-    
-    send_message(player, player.get_prompt())
+    send_message(player, f"You attack {mob.name}!\n")
+    combat_manager.start_combat(player, mob)
+    combat_manager.start_combat(mob, player)
 
 
-if __name__ == '__main__':
-    build_world()
-    reset_world()
+
+
+def combat_loop():
     
-    player = Player(0)
-    player.name = "Xamur"
-    player.character.race = "Cragkin"
-    player.character.origin = mud_consts.ORIGINS[0]
-    player.character.current_hitpoints = 10
-    player.character.set_racial_stats(*mud_consts.RACES["Cragkin"])
+    if combat_manager.next_round() == False:
+        return
     
-    # print(player.name)
-    # print(player.character)
-    
-    mob_list = room_manager.get_room_by_vnum(3710).get_mob_instances()
-    mob = next(iter(mob_list))
-    
-    print(player.character.get_prompt())
-    
-    while player.character.is_dead() is False and mob.character.is_dead() is False:
-        combat_round(player, mob)
-        print(player.character.get_prompt())
+    # First process all the combat hits
+    for combatant in combat_manager.get_characters_in_combat():
+        if combatant is None or combat_manager.get_current_target(combatant) is None:
+            continue
+        print(combatant.name, combat_manager.get_current_target(combatant).name)
+        combat_round(combatant, combat_manager.get_current_target(combatant))
+           
+    # At the end of the round, send the mob's health and prompt to all players
+    for combatant in combat_manager.get_characters_in_combat():
+        if combatant is None or combat_manager.get_current_target(combatant) is None:
+            continue
+        if combatant.character.NPC is False:
+            report_mob_health(combatant, combat_manager.get_current_target(combatant))
+            send_message(combatant, combatant.get_prompt() + "\n")
+            
+
+
+
+
