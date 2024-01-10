@@ -8,7 +8,7 @@ from mud_comms import send_message, send_room_message, player_manager, handle_di
 from mud_shared import colourize, match_keyword
 
 from mud_world import room_manager
-from mud_objects import player_db
+from mud_objects import player_db, combat_manager
 from mud_combat import test_kill_mob
 
 def kill_command(player, argument):
@@ -32,12 +32,48 @@ def kill_command(player, argument):
         # Proceed with the combat
         test_kill_mob(player, target_mob)
     
+def sleep_command(player, argument):
+    current_position = player.character.get_position()
+    if current_position == "Sleep":
+        send_message(player, "You are already sleeping.\n")
+        return
     
-
+    if combat_manager.in_combat(player):
+        send_message(player, "You are fighting someone!!\n")
+        return
+    
+    send_room_message(player.room_id, colourize(f"{player.name} lies down and goes to sleep.\n", "green"), excluded_player=player, excluded_msg=colourize("You lie down and fall asleep.\n", "green"))
+    player.character.set_position("Sleep")
+    
+def stand_command(player, argument):
+    current_position = player.character.get_position()
+    if current_position == "Stand":
+        send_message(player, "You are already standing.\n")
+        return
+    
+    player.character.set_position("Stand")
+    send_room_message(player.room_id, colourize(f"{player.name} stands up, ready for adventure.\n", "green"), excluded_player=player, excluded_msg=colourize("You stand up.\n", "green"))
+    
+def rest_command(player, argument):
+    current_position = player.character.get_position()
+    if current_position == "Rest":
+        send_message(player, "You are already resting.\n")
+        return
+    
+    if combat_manager.in_combat(player):
+        send_message(player, "You are fighting someone!!\n")
+        return
+    
+    player.character.set_position("Rest")
+    send_room_message(player.room_id, colourize(f"{player.name} sits down and rests.\n", "green"), excluded_player=player, excluded_msg=colourize("You sit down and rest.\n", "green"))
 
 def say_command(player, argument):
     if argument == '':
         send_message(player, "Say what??\n")
+        return
+    
+    if player.character.is_awake() == False:
+        send_room_message(player.room_id, colourize(f"{player.name} mumbles something in their sleep.\n", "yellow"), excluded_player=player, excluded_msg=colourize("You mumble something in your sleep.\n", "yellow"))
         return
     
     msg = colourize(f"{player.name} says '{argument}'\n", "yellow")
@@ -75,9 +111,24 @@ def who_command(player, argument):
     send_message(player, colourize("---------\n", "green"))
     count = 0
     for other_player in player_manager.get_players():
-        send_message(player, colourize(f"[{other_player.character.level : >4} {mud_consts.RACES_ABV[other_player.character.race]: <5}] {other_player.name}, {other_player.character.origin}\n", "green"))
+        send_message(player, colourize(f"[{other_player.character.level : >4} {mud_consts.RACES_ABV[other_player.character.race]: <5}] {other_player.name} {other_player.get_title()}\n", "green"))
         count += 1
     send_message(player, colourize(f"\n{count} players online.\n", "green"))
+
+def title_command(player, argument):
+    if argument == '':
+        send_message(player, "title usage: title <title>, title reset\n")
+        return
+    
+    if argument.split()[0].lower() == 'reset':
+        player.title = "the" + player.character.origin
+        send_message(player, "Your title has been reset.\n")
+        return
+
+    player.set_title(argument)
+    send_message(player, f"Your title is now: {player.get_title()}\n")
+
+
 
 def last_command(player, argument):
     if argument == '':
@@ -106,7 +157,16 @@ def last_command(player, argument):
 def quit_command(player, argument):
     handle_disconnection(player, "Goodbye! Hope to see you soon...\n")
 
+def save_command(player, argument):
+    player.save()
+    send_message(player, colourize("Player saved.\n", "green"))
+
+
 def recall_command(player, argument):
+    if player.character.is_awake() == False:
+        send_message(player, "You can't recall while sleeping.\n")
+        return
+    
     argument = argument.lower()
     if argument == 'show':
         # print a message to player showing the room name (based on the room_vnum from player.get_recall()
@@ -151,20 +211,22 @@ def recall_command(player, argument):
         send_message(player, "Available commands are 'recall', 'recall set', 'recall show' and 'recall clear'\n")
 
 def look_command(player, argument):
+    if player.character.is_awake() == False:
+        send_message(player, "You see 42 sheep dancing in your dreams.\n")
+        return
     
     if argument == '':
         room_instance = room_manager.get_room_by_vnum(player.room_id)
         
         if room_instance is not None:
-            exit_names = colourize("Exits: [" + room_instance.get_exit_names() + "]", "yellow")
+            exit_names = "[Exits: " + room_instance.get_exit_names() + "]"
             send_message(player, f"{colourize(room_instance.name,"yellow")}\n{exit_names}\n{room_instance.description}")
             player_names = room_instance.get_player_names(excluding_player=player)
             if player_names != '':
-                player_names_str = '\n'.join('\t' + name for name in player_names)
-                send_message(player, f"{player_names_str}\n")
+                send_message(player, f"{player_names}")
             mob_names = room_instance.get_mob_names()
             if mob_names != '':
-                send_message(player, f"{mob_names}\n")
+                send_message(player, f"{mob_names}")
     else:
         room_instance = room_manager.get_room_by_vnum(player.room_id)
         if room_instance is not None:
@@ -197,6 +259,17 @@ def motd_command(player, argument):
 
 
 def player_movement(player, direction):
+    current_position = player.character.get_position()
+    if current_position == "Sleep":
+        send_message(player, "You dream of moving, unfortunately you're still lying in your bed.\n")
+        return
+    if current_position == "Rest":
+        send_message(player, "You can't move while resting, best stand up first.\n")
+        return
+    if combat_manager.in_combat(player):
+        send_message(player, "You are fighting someone!\n")
+        return
+    
     room_instance = room_manager.get_room_by_vnum(player.room_id)
     if room_instance is not None:
         if direction in room_instance.doors:
@@ -249,14 +322,20 @@ def cmds_command(player, argument):
         send_message(player, f"{cmds}\n")
 
 commands = {
-    'kill': [kill_command], 
+    'kill': [kill_command],
+    'stand': [stand_command],
+    'wake': [stand_command],
+    'rest': [rest_command],
+    'sleep': [sleep_command], 
     'say': [say_command],
     'chat' : [chat_command],
     'who': [who_command],
+    'title':[title_command],
     'last': [last_command],
     'score': [score_command],
     'recall': [recall_command],
     'quit': [quit_command],
+    'save': [save_command],
     'look': [look_command],
     'motd': [motd_command],
     'north': [north_command],

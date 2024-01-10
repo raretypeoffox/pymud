@@ -22,6 +22,7 @@ class PlayerDatabase:
                 current_recall TEXT,
                 created TEXT,
                 lastlogin TEXT,
+                title TEXT,
                 character BLOB
             )
         ''')
@@ -31,22 +32,22 @@ class PlayerDatabase:
         with self.lock:
             character_data = pickle.dumps(player.character)
             self.cursor.execute('''
-                INSERT OR REPLACE INTO players (name, room_id, current_recall, created, lastlogin, character)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (player.name, player.room_id, player.current_recall, player.created, player.lastlogin, character_data))
+                INSERT OR REPLACE INTO players (name, room_id, current_recall, created, lastlogin, title, character)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (player.name, player.room_id, player.current_recall, player.created, player.lastlogin, player.title, character_data))
             self.connection.commit()
 
     def load_player(self, name):
         with self.lock:
             self.cursor.execute('''
-            SELECT room_id, current_recall, created, lastlogin, character FROM players WHERE LOWER(name) = LOWER(?)
+            SELECT room_id, current_recall, created, lastlogin, title, character FROM players WHERE LOWER(name) = LOWER(?)
             ''', (name.lower(),))
             result = self.cursor.fetchone()
             if result is None:
                 log_error(f"Error loading player data for {name}")
                 return None
             else:
-                room_id, current_recall, created, lastlogin, character_data = result
+                room_id, current_recall, created, lastlogin, title, character_data = result
                 character = pickle.loads(character_data)
                 return {
                 'name': name,
@@ -54,6 +55,7 @@ class PlayerDatabase:
                 'current_recall': current_recall,
                 'created': created,
                 'lastlogin': lastlogin,
+                'title': title,
                 'character': character
                 }
     
@@ -131,6 +133,7 @@ class Player:
         
         self.created = datetime.now()
         self.lastlogin = datetime.now()
+        self.title = ""
 
     def save(self):
         player_db.save_player(self)
@@ -144,6 +147,7 @@ class Player:
         self.current_recall = int(player_data['current_recall'])
         self.created = player_data['created']
         self.lastlogin = datetime.now()
+        self.title = player_data['title']
         self.character = player_data['character']
         return True
     
@@ -160,8 +164,14 @@ class Player:
         if new_room is not None:
             new_room.add_player(self)
             self.current_room = new_room
-            
-
+    
+    def get_title(self):
+        if self.title == "":
+            return f"the {self.character.origin}"
+        return self.title
+    
+    def set_title(self, title):
+        self.title = title
         
     def get_recall(self):
         return self.current_recall
@@ -199,7 +209,7 @@ class Character:
         self.max_stamina = 100
         self.current_stamina = self.max_stamina
         
-        self.position = "Standing"
+        self.position = "Stand"
         
         self.combat_with = set()
         self.current_target = None
@@ -239,7 +249,7 @@ class Character:
         return self.hitroll + self.dex - 10
     
     def get_AC(self):
-        return self.ac
+        return self.ac + self.dex - 10
     
     def get_damroll(self):
         return 1, 4, (self.str - 10)
@@ -254,7 +264,16 @@ class Character:
         return self.current_hitpoints <= 0
     
     def is_awake(self):
-        return self.position != "Sleeping"
+        return self.position != "Sleep"
+    
+    def get_position(self):
+        return self.position
+    
+    def set_position(self, position):
+        if position in ["Stand", "Rest", "Sleep"]:
+            self.position = position
+        else:
+            log_error(f"Invalid position {position}")
     
     def gain_experience(self, xp):
         msg = ""
@@ -277,6 +296,41 @@ class Character:
         # self.max_stamina += dice_roll(1, 10, self.str - 10)
         self.current_stamina = self.max_stamina
         return f"You have gained {hp_gain} hitpoints and {mana_gain} mana!\n"
+    
+    def regen_hp(self, amount):
+        amount = round(amount)
+        self.current_hitpoints = min(self.max_hitpoints, self.current_hitpoints + amount)
+        
+    def regen_mana(self, amount):
+        amount = round(amount)
+        self.current_mana = min(self.max_mana, self.current_mana + amount)
+        
+    def regen_stamina(self, amount):
+        amount = round(amount)
+        self.current_stamina = min(self.max_stamina, self.current_stamina + amount)
+        
+    def tick(self):
+        # update spell lengths
+        
+        REGEN_HP_RATE = self.max_hitpoints / 4
+        REGEN_MANA_RATE = self.max_mana / 4
+        REGEN_STAMINA_RATE = self.max_stamina
+        
+        if self.position == "Sleep":
+            self.regen_hp(REGEN_HP_RATE)
+            self.regen_mana(REGEN_MANA_RATE)
+            self.regen_stamina(REGEN_STAMINA_RATE)
+        elif self.position == "Rest":
+            self.regen_hp(REGEN_HP_RATE/2)
+            self.regen_mana(REGEN_MANA_RATE/2)
+            self.regen_stamina(REGEN_STAMINA_RATE/2)
+        else:
+            self.regen_hp(REGEN_HP_RATE/10)
+            self.regen_mana(REGEN_MANA_RATE/10)
+            self.regen_stamina(REGEN_STAMINA_RATE/4)
+            
+            
+        
 
 
     # for debugging
@@ -489,7 +543,7 @@ class Room:
         self.mob_list.discard(mob)
         
     def get_exit_names(self):
-        exit_names = ["North", "East", "South", "West", "Up", "Down"]
+        exit_names = ["north", "east", "south", "west", "up", "down"]
         available_exits = []
         
         for i in range(len(exit_names)):
@@ -506,18 +560,18 @@ class Room:
         return self.player_list
     
     def get_player_names(self, excluding_player=None):
-        player_names = []
-        for player in self.player_list:
-            if player != excluding_player:
-                player_names.append(player.name)
-        return player_names
+        player_names = [(player.name, player.get_title()) for player in self.player_list if player != excluding_player]
+        if not player_names:  # Check if the list is empty
+            return ""
+        else:
+            return '\n'.join(f'\t{name} {title}' for name, title in player_names) + '\n'
     
     def get_mob_names(self):
-        mob_names = []
-        for mob in self.mob_list:
-            mob_names.append(mob.template.long_desc)
-        mob_names_str = ''.join('\t' + name for name in mob_names)
-        return mob_names_str
+        mob_names = [mob.template.long_desc for mob in self.mob_list]
+        if not mob_names:  # Check if the list is empty
+            return ""
+        else:
+            return ''.join('\t' + name for name in mob_names)
     
     def get_mob_keywords(self):
         mob_keywords = []
@@ -764,3 +818,5 @@ object_manager = ObjectManager()
 
 mob_instance_manager = MobInstanceManager()
 object_instance_manager = ObjectInstanceManager()
+
+combat_manager = CombatManager()

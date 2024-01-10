@@ -137,6 +137,7 @@ def parse_room(lines):
     room_vnum = int(lines[0][1:])
     current_room = Room(room_vnum)
     current_room.name = lines[1][:-1]
+    print(current_room.name)
     current_room.description, offset = parse_multi_line(lines[2:])
     offset+=2
     
@@ -303,11 +304,11 @@ def load_area_files_list(file_path):
 
 def build_world():
     print("Building world...")
-    area_list_path = 'world/area.lst'  # Update this path to your area.lst file location
+    area_list_path = 'new_world/area.lst'  # Update this path to your area.lst file location
     are_files = load_area_files_list(area_list_path)
 
     for are_file in are_files:
-        full_path = f'world/{are_file}'  # Update the path as necessary
+        full_path = f'new_world/{are_file}'  # Update the path as necessary
         print(f"\tLoading {full_path}...")
         parse_are_file(full_path)
 
@@ -320,26 +321,26 @@ def reset_world():
             room = room_manager.get_room_by_vnum(mob_reset.room_vnum)
             if room is not None:
                 # todo later: review max_count
-                for i in range(mob_reset.max_count):
-                    mob = MobInstance(mob_template)
-                    mob_instance_manager.add_mob_instance(mob)
-                    mob.set_room(room)
-                    room.add_mob(mob)
-                    if mob_reset.equipment:
-                        for slot, obj_vnum in mob_reset.equipment.slots.items():
-                            if obj_vnum != 0:
-                                obj_template = object_manager.get_object(obj_vnum)
-                                if obj_template is not None:
-                                    obj = ObjectInstance(obj_template)
-                                    object_instance_manager.add_object_instance(obj)
-                                    mob.equipment.equip(slot, obj)
-                    if mob_reset.inventory:
-                        for obj_vnum in mob_reset.inventory:
+                # for i in range(mob_reset.max_count):
+                mob = MobInstance(mob_template)
+                mob_instance_manager.add_mob_instance(mob)
+                mob.set_room(room)
+                room.add_mob(mob)
+                if mob_reset.equipment:
+                    for slot, obj_vnum in mob_reset.equipment.slots.items():
+                        if obj_vnum != 0:
                             obj_template = object_manager.get_object(obj_vnum)
                             if obj_template is not None:
                                 obj = ObjectInstance(obj_template)
                                 object_instance_manager.add_object_instance(obj)
-                                mob.add_item(obj)
+                                mob.equipment.equip(slot, obj)
+                if mob_reset.inventory:
+                    for obj_vnum in mob_reset.inventory:
+                        obj_template = object_manager.get_object(obj_vnum)
+                        if obj_template is not None:
+                            obj = ObjectInstance(obj_template)
+                            object_instance_manager.add_object_instance(obj)
+                            mob.add_item(obj)
    
             else:
                 print(f"Room {mob_reset.room_vnum} not found")

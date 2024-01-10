@@ -2,13 +2,11 @@ import time
 
 from mud_shared import log_info, log_error, dice_roll, random_percent, colourize, first_to_upper
 
-
 from mud_world import mob_instance_manager
 from mud_comms import send_room_message_processing, send_message
 
+from mud_objects import combat_manager
 
-from mud_objects import CombatManager
-combat_manager = CombatManager()
 
 
 def return_PC_and_NPC(character_one, character_two):
@@ -145,14 +143,14 @@ def multi_hit(attacker, defender, type=0):
     if random_percent() < fourth_attack_chance:
         one_hit(attacker, defender, type)
 
-def combat_round(combatant_one, combatant_two):
+def combat_round(combatant_one, combatant_two, type=0):
         
-    multi_hit(combatant_one, combatant_two)
+    multi_hit(combatant_one, combatant_two, type)
        
-    PC, NPC = return_PC_and_NPC(combatant_one, combatant_two)
+    # PC, NPC = return_PC_and_NPC(combatant_one, combatant_two)
     
-    if PC.character.is_dead() or NPC.character.is_dead():
-        return
+    # if PC.character.is_dead() or NPC.character.is_dead():
+    #     return
     
 
 def report_mob_health(PC, NPC):
@@ -177,8 +175,8 @@ def test_kill_mob(player, mob):
     send_message(player, f"You attack {mob.name}!\n")
     combat_manager.start_combat(player, mob)
     combat_manager.start_combat(mob, player)
-
-
+    combat_round(player, mob)
+    report_mob_health(player, combat_manager.get_current_target(player))
 
 
 def combat_loop():

@@ -94,8 +94,10 @@ def match_keyword(keywords, user_input):
     
     user_input = user_input.lower()
     for keyword in keywords:
-        if keyword.lower().startswith(user_input):
-            return keyword
+        split_line = keyword.lower().split()
+        for word in split_line:
+            if word.startswith(user_input):
+                return keyword
     return None
 
    

@@ -1,0 +1,318 @@
+#AREA	{ 1  5} Vagonuth Beach~
+
+
+
+#MOBILES
+#3000
+crab scuttling~
+a small, scuttling crab~
+A small crab scuttles across the sand, its claws snapping.
+~
+The crab, no bigger than a hand, has a tough shell with hints 
+of blue and green. Its eyes are on constant alert, and its 
+claws snap in the air defensively.
+~
+64 0 0 S
+1 0 10 1d10+5 1d4+0
+0 0
+0 0 1
+
+#3001
+noisy gull~
+a noisy beach gull~
+A beach gull is here, searching for food, its eyes glinting with curiosity
+~
+This white and grey gull has a sharp beak and keen eyes. It flaps its wings
+occasionally, sending sand scattering as it hops around the beach.
+~
+64 0 0 S
+1 0 10 1d10+5 1d4+0
+0 0
+0 0 1
+
+#3002
+stranded jellyfish~
+a stranded jellyfish~
+A translucent jellyfish glimmers on the sand, occasionally pulsating.
+~
+The jellyfish is a gelatinous creature with a rainbow sheen. Its tentacles,
+now motionless on the sand, hint at a hidden danger.
+~
+2|64 0 0 S
+1 0 10 1d10+5 1d4+0
+0 0
+0 0 1
+
+#3003
+tiny turtle~
+a tiny turtle~
+A tiny turtle slowly makes its way across the beach, its movements deliberate.
+~
+The turtle, small enough to fit in the palm of your hand, has a sturdy shell 
+with a patterned design. Its eyes are bright and observant as it navigates 
+the sands.
+~
+64 0 0 S
+1 0 10 1d10+5 1d4+0
+0 0
+0 0 1
+
+#3004
+starfish colourful colorful~
+a colourful starfish~
+A starfish lies in a shallow rock pool, its colors vibrant against the dull rocks.
+~
+This five-armed starfish displays a stunning array of colors, from deep 
+red to bright orange. It clings to a rock, seemingly undisturbed by your presence.
+~
+64 0 0 S
+1 0 10 1d10+5 1d4+0
+0 0
+0 0 1
+
+#3005
+spider cave~
+a damp cave spider~
+A large, shadowy spider crawls silently along the cave wall.
+~
+This spider, larger than a human hand, has a bulky body covered in dark,
+glistening hairs. Its eight eyes reflect the faint light within the cave,
+giving it a menacing appearance. The spider moves with an eerie grace,
+its legs gently tapping on the damp cave surface.
+~
+64 0 0 S
+2 0 10 3d4+5 1d4+1
+0 0
+0 0 1
+
+#3006
+stalactite bat~
+a small stalactite bat~
+Hanging from a stalactite, a small bat sleeps with its wings wrapped around itself.
+~
+The stalactite bat, when awake, reveals a wingspan twice its body size. 
+It has a furry body with a shade of dark brown, almost blending into the 
+cave's darkness. Its tiny, sharp teeth are visible when it yawns or screeches, 
+and it has keen ears that twitch at the slightest sound.
+~
+2|64 0 0 S
+2 0 10 3d4+5 1d4+1
+0 0
+0 0 1
+
+
+#0
+
+
+
+#OBJECTS
+
+#0
+
+
+
+#ROOMS
+#3001
+Crashing waves shoreline~
+  The rhythmic sound of waves crashing against the shore fills the air. The 
+cool sea water gently laps at your feet, retreating back to reveal a sandy 
+beach strewn with shells and seaweed. In the distance, seagulls caw as they 
+circle above the water's surface.
+~
+3000 0 0
+D0
+~
+~
+0 0 3004
+D3
+~
+~
+0 0 3002
+D1
+~
+~
+0 0 3003
+S
+#3002
+Abandoned Wooden Jetty~
+  An old wooden jetty, weathered by time and the sea, stretches out into the 
+water. The wood creaks underfoot, telling tales of fishermen who once cast 
+their nets here. At the end of the jetty, a great view opens up, showcasing 
+the vastness of the ocean and the horizon beyond.
+~
+3000 0 0
+D0
+~
+~
+0 0 3005
+D1
+~
+~
+0 0 3001
+S
+#3003
+Sunlit Coral Reef~
+  Underneath the clear blue water, a vibrant coral reef teems with life.
+Colorful fish dart between the corals, and the sun's rays filter through 
+the water, creating a kaleidoscope of light. The gentle sway of the sea
+nurtures a sense of peace and awe.
+~
+3000 0 0
+D3
+~
+~
+0 0 3001
+D0
+~
+~
+0 0 3006
+S
+#3004
+Whispering Palms~
+  This tranquil area is marked by a grove of tall palm trees that 
+rustle in the ocean breeze. The sound is like quiet conversation, 
+whispering secrets of the sea. The shade provided by the palms 
+offers a cool respite from the sun, and the scent of tropical 
+flowers lingers in the air.
+~
+3000 0 0
+D1
+~
+~
+0 0 3006
+D2
+~
+~
+0 0 3001
+D3
+~
+~
+0 0 3005
+S
+#3005
+Weathered Cliff Outlook~
+  Atop a high cliff, the land overlooks the expanse of the ocean. The 
+cliffs are jagged, carved by wind and waves over centuries. From this 
+vantage point, you can see the curvature of the coastline and the 
+endless waters that stretch out towards the horizon. To the north, 
+a small, barely noticeable trail weaves its way through the underbrush, 
+inviting the curious to explore further inland.
+~
+3000 0 0
+D0
+~
+~
+0 0 3007
+D1
+~
+~
+0 0 3004
+D2
+~
+~
+0 0 3002
+S
+#3006
+Dune-Shadowed Cove~
+  Shielded by tall, grass-covered dunes, this secluded cove is a serene 
+escape from the sea's constant roar. The sand here is warm and fine, inviting 
+bare feet to tread softly. Small crabs scuttle across the beach, disappearing 
+into tiny holes in the sand.
+~
+3000 0 0
+D2
+~
+~
+0 0 3003
+D3
+~
+~
+0 0 3004
+S
+#3007
+Narrow Trail Through the Brush~
+  This narrow, winding trail cuts through thick brush and undergrowth, a stark 
+contrast to the open sea behind. Overhead, branches intertwine to form a natural 
+tunnel, while the sounds of the ocean gradually fade, replaced by the rustling 
+of leaves and occasional bird calls. The trail leads you north, away from the 
+cliff's edge.
+~
+3000 0 0
+D0
+~
+~
+0 0 3008
+D2
+~
+~
+0 0 3006
+S
+#3008
+Whispering Cave Passage~
+  The trail leads into a small, dimly lit cave. Water droplets echo as they fall 
+from the cave's ceiling, creating a serene, if mysterious atmosphere. The walls 
+are cool and slightly damp to the touch, and the cave narrows as it curves westward, 
+hinting at secrets hidden deeper within the earth.
+~
+3000 0 0
+D2
+~
+~
+0 0 3007
+D3
+~
+~
+0 0 3009
+S
+#3009
+Emergence into Lush Forest~
+  Emerging from the cave, you find yourself in a vibrant, lush forest. The air is fresh 
+and filled with the scent of pine and earth. Sunlight filters through the dense canopy 
+above, casting dappled shadows on the forest floor. The vegetation is dense, but a path 
+to the west is clear, inviting further exploration into the heart of this green haven.
+~
+3000 0 0
+D1
+~
+~
+0 0 3008
+D3
+~
+~
+0 0 3009
+S
+
+#0
+
+
+
+#RESETS
+M 0 3000 2 3001           (a small crab)
+M 0 3000 2 3002           (a small crab)
+M 0 3002 1 3003           (jellyfish)
+M 0 3004 2 3003           (starfish)
+M 0 3004 2 3006           (starfish)
+M 0 3001 2 3002           (seagull)
+M 0 3001 2 3005           (seagull)
+M 0 3003 2 3004           (turtle)
+M 0 3003 2 3006           (turtle)
+M 0 3005 2 3007           (spider)
+M 0 3005 2 3008           (spider)
+M 0 3006 1 3008           (bat)
+S
+
+
+
+#SHOPS
+
+0
+
+
+
+#SPECIALS
+
+S
+
+
+
+#$
