@@ -9,28 +9,64 @@ import mud_consts
 
 from mud_objects import Player, PlayerManager
 from mud_world import room_manager
-from mud_shared import log_info, log_error, colourize
+from mud_shared import log_info, log_error, colourize, first_to_upper
 
 player_manager = PlayerManager()
 
+def send_room_message_processing(player, target, msg):
+    if player.current_room is None:
+        log_error(f"{player.name} has no room instance")
+        return
+    
+    msg_to_player = msg
+    msg_to_player = msg_to_player.replace("$A", "you")
+    msg_to_player = msg_to_player.replace("$e", "")
+    msg_to_player = msg_to_player.replace("$s", "")
+    msg_to_player = msg_to_player.replace("$D", target.name)
+    msg_to_player = first_to_upper(msg_to_player)
+    
+    msg = msg.replace("$s", "s")
+    msg = msg.replace("$e", "e")
+    msg = msg.replace("$A", player.name)
+    msg = first_to_upper(msg)
+    
+    msg_to_target = msg
+    msg_to_target = msg_to_target.replace("$D", "you")
+    
+    msg_to_room = msg
+    msg_to_room = msg_to_room.replace("$D", target.name)
+    
+    send_room_message(player.current_room.room_vnum, msg_to_room, [player, target], [msg_to_player, msg_to_target])
+    
+
 def send_room_message(room_vnum, msg, excluded_player=None, excluded_msg=None):
+    if isinstance(excluded_player, Player):
+        excluded_player = [excluded_player]
+    if isinstance(excluded_msg, str):
+        excluded_msg = [excluded_msg]
     room = room_manager.get_room_by_vnum(room_vnum)
     for player in room.get_players():
-        if player != excluded_player:
+        if not player.character.is_awake() or player.character.NPC:
+            continue
+        if player not in excluded_player:
             send_message(player, msg)
         else:
             if excluded_msg is not None:
-                send_message(player, excluded_msg)
-
+                index = excluded_player.index(player)
+                if index < len(excluded_msg):
+                    send_message(player, excluded_msg[index])
+                
 def send_global_message(msg):
     for player in player_manager.players:
-        send_message(player, msg)
+        if player.loggedin:
+            send_message(player, msg)
         
 def send_message(player, msg):
     try:
         player.socket.sendall(msg.encode('utf-8'))
     except (BrokenPipeError, OSError):
         handle_disconnection(player)
+
     
 # Character login functions
     
@@ -51,6 +87,10 @@ def handle_client_login(player, msg):
 
 def handle_new_character(player, msg):
     player.name = msg.strip()
+    if player.name.isalpha() == False:
+        send_message(player, "Invalid name! Please choose a valid name: ")
+        player.name = None
+        return
     stored_password = mud_password.load_password(player.name)
     if stored_password is not None:
         handle_existing_player(player)
@@ -136,12 +176,14 @@ def finish_login(player, msg, log_msg):
     player.loggedin = True
     if player.awaiting_reconnect_confirmation is False:
         send_message(player, mud_consts.MOTD)
-    room_manager.get_room_by_vnum(player.current_room).add_player(player)
     player.load()
+    room = room_manager.get_room_by_vnum(player.room_id)
+    room.add_player(player)
+    player.set_room(room)
     send_message(player, msg)
     log_info(log_msg)
     send_global_message(colourize(f"[INFO]: {player.name} has entered the game.\n", "red"))
-    send_room_message(player.current_room, colourize(f"{player.name} suddenly appears in the room.\n", "green"), player)
+    send_room_message(player.room_id, colourize(f"{player.name} suddenly appears in the room.\n", "green"), player)
     del player.reconnect_prompt
     del player.awaiting_reconnect_confirmation
     del player.awaiting_race
@@ -153,7 +195,7 @@ def handle_disconnection(player, msg=""):
         return
     print(f"{player.fd}: Player {player.name} disconnected: {msg}")
     log_info(f"{player.name} disconnected: {msg}")
-    new_room_instance = room_manager.get_room_by_vnum(player.current_room)
+    new_room_instance = room_manager.get_room_by_vnum(player.room_id)
     new_room_instance.remove_player(player)   
     if player_manager.disconnect_player(player, msg) and player.name != None:
        send_global_message(colourize(f"[INFO]: {player.name} has left the game.\n", "red")) 

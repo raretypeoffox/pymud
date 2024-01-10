@@ -81,6 +81,9 @@ def dice_roll(num, size, bonus):
 
 def random_percent():
     return round(random.uniform(0,1), 4)
+
+def first_to_upper(s):
+    return s[0].upper() + s[1:]
     
 def match_keyword(keywords, user_input):
     ''' Attempts to match user input against a list of keywords.

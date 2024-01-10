@@ -1,4 +1,5 @@
-from mud_objects import MobTemplate, Room, RoomManager, ObjectManager, MobManager, ResetMob, Resets, ObjectTemplate, MobInstance, MobInstanceManager, ObjectInstanceManager, ObjectInstance
+from mud_objects import MobTemplate, Room, ResetMob, ObjectTemplate, MobInstance, ObjectInstance
+from mud_objects import room_manager, mob_manager, object_manager, reset_manager, mob_instance_manager, object_instance_manager
 
 ### Parsing functions
 
@@ -299,17 +300,6 @@ def load_area_files_list(file_path):
 
     are_files = [line.strip() for line in lines if line.strip() != '$']
     return are_files
-
-room_manager = RoomManager()
-mob_manager = MobManager()
-reset_manager = Resets()
-object_manager = ObjectManager()
-
-mob_instance_manager = MobInstanceManager()
-object_instance_manager = ObjectInstanceManager()
-
-# when needed in other modules use:
-# from mud_world import room_manager, mob_manager, reset_manager, object_manager
 
 def build_world():
     print("Building world...")

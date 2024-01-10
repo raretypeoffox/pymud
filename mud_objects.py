@@ -18,7 +18,7 @@ class PlayerDatabase:
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS players (
                 name TEXT PRIMARY KEY,
-                current_room TEXT,
+                room_id TEXT,
                 current_recall TEXT,
                 created TEXT,
                 lastlogin TEXT,
@@ -31,26 +31,26 @@ class PlayerDatabase:
         with self.lock:
             character_data = pickle.dumps(player.character)
             self.cursor.execute('''
-                INSERT OR REPLACE INTO players (name, current_room, current_recall, created, lastlogin, character)
+                INSERT OR REPLACE INTO players (name, room_id, current_recall, created, lastlogin, character)
                 VALUES (?, ?, ?, ?, ?, ?)
-            ''', (player.name, player.current_room, player.current_recall, player.created, player.lastlogin, character_data))
+            ''', (player.name, player.room_id, player.current_recall, player.created, player.lastlogin, character_data))
             self.connection.commit()
 
     def load_player(self, name):
         with self.lock:
             self.cursor.execute('''
-            SELECT current_room, current_recall, created, lastlogin, character FROM players WHERE LOWER(name) = LOWER(?)
+            SELECT room_id, current_recall, created, lastlogin, character FROM players WHERE LOWER(name) = LOWER(?)
             ''', (name.lower(),))
             result = self.cursor.fetchone()
             if result is None:
                 log_error(f"Error loading player data for {name}")
                 return None
             else:
-                current_room, current_recall, created, lastlogin, character_data = result
+                room_id, current_recall, created, lastlogin, character_data = result
                 character = pickle.loads(character_data)
                 return {
                 'name': name,
-                'current_room': current_room,
+                'room_id': room_id,
                 'current_recall': current_recall,
                 'created': created,
                 'lastlogin': lastlogin,
@@ -124,7 +124,8 @@ class Player:
         self.awaiting_race = False
         self.awaiting_origin = False
         self.name = None
-        self.current_room = 3001
+        self.room_id = 3001
+        self.current_room = None
         self.current_recall = 0
         self.character = Character()
         
@@ -138,7 +139,8 @@ class Player:
         player_data = player_db.load_player(self.name)
         if player_data is None:
             return False
-        self.current_room = int(player_data['current_room'])
+        self.room_id = int(player_data['room_id'])
+        self.set_room(room_manager.get_room_by_vnum(self.room_id))
         self.current_recall = int(player_data['current_recall'])
         self.created = player_data['created']
         self.lastlogin = datetime.now()
@@ -148,8 +150,18 @@ class Player:
     def save_exists(self):
         return player_db.load_player(self.name) is not None
 
-    def move_to_room(self, room):
+    def set_room(self, room):
         self.current_room = room
+
+    def move_to_room(self, new_room):
+        self.room_id = new_room.room_vnum
+        if self.current_room is not None:
+            self.current_room.remove_player(self)
+        if new_room is not None:
+            new_room.add_player(self)
+            self.current_room = new_room
+            
+
         
     def get_recall(self):
         return self.current_recall
@@ -167,9 +179,9 @@ class Player:
         return 1, 4, (self.character.str - 10)
         # return self.character.damroll_dice, self.character.damroll_size, self.character.damroll_bonus
     
-    
     def get_AC(self):
         return self.character.ac
+    
         
 class Character:
     def __init__(self, NPC=False):
@@ -211,7 +223,7 @@ class Character:
 
     def get_prompt(self):
         c = colourize
-        return c("\n<HP: ", "green") + c(f"{self.current_hitpoints}", "white") + c(f"/{self.max_hitpoints}", "green") + c(" MP: ", "green") + c(f"{self.current_mana}", "white") + c(f"/{self.max_mana}", "green") + c(" SP: ", "green") + c(f"{self.current_stamina}", "white") + c(f"/{self.max_stamina}", "green") + c("> \n", "green")
+        return c("\n<HP: ", "green") + c(f"{self.current_hitpoints}", "white") + c(f"/{self.max_hitpoints}", "green") + c(" MP: ", "green") + c(f"{self.current_mana}", "white") + c(f"/{self.max_mana}", "green") + c(" SP: ", "green") + c(f"{self.current_stamina}", "white") + c(f"/{self.max_stamina}", "green") + c(f" {self.tnl-self.xp}", "yellow") + c("> \n", "green")
 
     def set_racial_stats(self, str, dex, con, int, wis, cha, tnl, racials):
         self.str = str
@@ -240,9 +252,33 @@ class Character:
         
     def is_dead(self):
         return self.current_hitpoints <= 0
+    
+    def is_awake(self):
+        return self.position != "Sleeping"
+    
+    def gain_experience(self, xp):
+        msg = ""
+        self.xp += xp
+        if self.xp >= self.tnl:
+            while self.xp >= self.tnl:
+                self.xp -= self.tnl
+                msg += f"You have gained a level!!!\n"
+                msg += self.level_up()      
+        return msg
+            
+    def level_up(self):
+        self.level += 1
+        hp_gain = dice_roll(2, 5, self.con - 10)
+        self.max_hitpoints += hp_gain
+        self.current_hitpoints = self.max_hitpoints
+        mana_gain = dice_roll(1, 10, self.int - 10)
+        self.max_mana += mana_gain
+        self.current_mana = self.max_mana
+        # self.max_stamina += dice_roll(1, 10, self.str - 10)
+        self.current_stamina = self.max_stamina
+        return f"You have gained {hp_gain} hitpoints and {mana_gain} mana!\n"
 
-    
-    
+
     # for debugging
     def __str__(self):
         str = f"Level: {self.level}, Race: {self.race}, Origin: {self.origin}\n"
@@ -320,8 +356,6 @@ class MobManager:
     def get_all_mob_templates(self):
         return self.mob_templates.values()
         
-    
-
 class ObjectManager:
     def __init__(self):
         self.objects = {}
@@ -339,7 +373,6 @@ class ObjectManager:
     def get_all_objects(self):
         return self.objects.values()
         
-
 class RoomManager:
     def __init__(self):
         self.rooms = {}
@@ -581,7 +614,7 @@ class MobInstanceManager:
 class MobInstance:
     def __init__(self, template):
         self.template = template
-        self.name = self.template.short_desc.upper()[0] + self.template.short_desc[1:]
+        self.name = self.template.short_desc
         self.current_room = None
         
         self.max_hitpoints = dice_roll(template.hitdice_num, template.hitdice_size, template.hitdice_bonus)
@@ -603,8 +636,9 @@ class MobInstance:
     def move_to_room(self, new_room):
         if self.current_room is not None:
             self.current_room.remove_mob(self)
-        new_room.add_mob(self)
-        self.current_room = new_room
+        if new_room is not None:
+            new_room.add_mob(self)
+            self.current_room = new_room
         
     def get_description(self):
         description = []
@@ -677,13 +711,11 @@ class CombatManager:
         self.last_update = time.time()
 
     def start_combat(self, character, target):
-        print(f"Starting combat: character={character}, target={target}")
         if character not in self.combat_dict:
             self.combat_dict[character] = set()
         self.combat_dict[character].add(target)
         if character not in self.current_target:
             self.current_target[character] = target
-        print(f"Combat dict after starting combat: {self.combat_dict}")
 
     def end_combat(self, character, target):
         if character in self.combat_dict:
@@ -722,4 +754,13 @@ class CombatManager:
             return True
         else:
             return False
-        
+
+
+
+room_manager = RoomManager()
+mob_manager = MobManager()
+reset_manager = Resets()
+object_manager = ObjectManager()
+
+mob_instance_manager = MobInstanceManager()
+object_instance_manager = ObjectInstanceManager()

@@ -16,7 +16,7 @@ def kill_command(player, argument):
         send_message(player, "You must specify a mob name.\n")
         return
     
-    room_instance = room_manager.get_room_by_vnum(player.current_room)
+    room_instance = room_manager.get_room_by_vnum(player.room_id)
     # compare argument against mob keywords in room and if there's a match, return instance
     mob_list = room_instance.get_mob_keywords_and_instances()
 
@@ -42,7 +42,7 @@ def say_command(player, argument):
     
     msg = colourize(f"{player.name} says '{argument}'\n", "yellow")
     excluded_msg = colourize(f"You say '{argument}'\n", "yellow")
-    send_room_message(player.current_room, msg, excluded_player=player, excluded_msg=excluded_msg)
+    send_room_message(player.room_id, msg, excluded_player=player, excluded_msg=excluded_msg)
             
 def chat_command(player, argument):
     if argument == '':
@@ -123,13 +123,13 @@ def recall_command(player, argument):
         send_message(player, "Recall cleared.\n")
         return        
     
-    if room_manager.get_room_by_vnum(player.current_room).cursed:
+    if room_manager.get_room_by_vnum(player.room_id).cursed:
         send_message(player, "Room is cursed and you cannot recall here.\n")
         return
 
     if argument == 'set':
         # set the recall room to the current room
-        player.set_recall(player.current_room)
+        player.set_recall(player.room_id)
         send_message(player, "Recall set.\n")
         return
     
@@ -139,20 +139,21 @@ def recall_command(player, argument):
             send_message(player, "You have no recall set.\n")
             return
         
-        if recall_room_vnum == player.current_room:
+        if recall_room_vnum == player.room_id:
             send_message(player, "You are already there!\n")
             return
         
         msg = colourize(f"{player.name} utters the word 'recall' and suddenly disappears!\n", "green")
         excluded_msg = colourize("You feel a strange sensation as you are magically transported.\n", "green")
-        move_player(player, player.current_room, recall_room_vnum, msg_to_room=msg, msg_to_player=excluded_msg)
+        move_player(player, player.room_id, recall_room_vnum, msg_to_room=msg, msg_to_player=excluded_msg)
+        send_room_message(recall_room_vnum, colourize(f"{player.name} arrives from the ether.\n", "green"), excluded_player=player)
     else:
         send_message(player, "Available commands are 'recall', 'recall set', 'recall show' and 'recall clear'\n")
 
 def look_command(player, argument):
     
     if argument == '':
-        room_instance = room_manager.get_room_by_vnum(player.current_room)
+        room_instance = room_manager.get_room_by_vnum(player.room_id)
         
         if room_instance is not None:
             exit_names = colourize("Exits: [" + room_instance.get_exit_names() + "]", "yellow")
@@ -165,7 +166,7 @@ def look_command(player, argument):
             if mob_names != '':
                 send_message(player, f"{mob_names}\n")
     else:
-        room_instance = room_manager.get_room_by_vnum(player.current_room)
+        room_instance = room_manager.get_room_by_vnum(player.room_id)
         if room_instance is not None:
             userinput = argument.split()[0]
             keywords = room_instance.get_door_keywords()
@@ -196,11 +197,11 @@ def motd_command(player, argument):
 
 
 def player_movement(player, direction):
-    room_instance = room_manager.get_room_by_vnum(player.current_room)
+    room_instance = room_manager.get_room_by_vnum(player.room_id)
     if room_instance is not None:
         if direction in room_instance.doors:
             if room_instance.doors[direction]["locks"] == 0:
-                move_player(player, player.current_room, room_instance.doors[direction]["to_room"], msg_to_room=colourize(f"{player.name} leaves to the {mud_consts.DIRECTIONS[direction]}.\n", "green"))
+                move_player(player, player.room_id, room_instance.doors[direction]["to_room"], msg_to_room=colourize(f"{player.name} leaves to the {mud_consts.DIRECTIONS[direction]}.\n", "green"))
                 send_room_message(room_instance.doors[direction]["to_room"], colourize(f"{player.name} arrives from the {mud_consts.DIRECTIONS_REVERSE[direction]}.\n", "green"), excluded_player=player)
             else:
                 send_message(player, "The door is locked.\n")
@@ -211,16 +212,18 @@ def goto_command(player, argument):
     if argument == '':
         send_message(player, "You must specify a room number.\n")
     else:
+        room_id = int(argument)
         try:
-            room_instance = room_manager.get_room_by_vnum(player.current_room)
-            room_instance.remove_player(player)
-            room_id = int(argument)
-            player.current_room = room_id
-            new_room_instance = room_manager.get_room_by_vnum(player.current_room)
-            new_room_instance.add_player(player)
-            look_command(player, "")
-        except ValueError:
-            send_message(player, "You must specify a room number.\n")
+            room = room_manager.get_room_by_vnum(room_id)
+        except:
+            room = None
+        if room is None:
+            send_message(player, "No room with that number found.\n")
+              
+        msg = colourize(f"{player.name} utters the word 'goto' and suddenly disappears!\n", "green")
+        excluded_msg = colourize("You feel a strange sensation as you are magically transported.\n", "green")
+        move_player(player, player.room_id, room_id, msg_to_room=msg, msg_to_player=excluded_msg)
+
 
 def north_command(player, argument):
     player_movement(player, 0)
@@ -246,24 +249,24 @@ def cmds_command(player, argument):
         send_message(player, f"{cmds}\n")
 
 commands = {
-    'kill': kill_command, 
-    'say': say_command,
-    'chat' : chat_command,
-    'who': who_command,
-    'last': last_command,
-    'score': score_command,
-    'recall': recall_command,
-    'quit': quit_command,
-    'look': look_command,
-    'motd': motd_command,
-    'north': north_command,
-    'east': east_command,
-    'south': south_command,
-    'west': west_command,
-    'up': up_command,
-    'down': down_command,
-    'goto': goto_command,
-    'cmds' : cmds_command,
+    'kill': [kill_command], 
+    'say': [say_command],
+    'chat' : [chat_command],
+    'who': [who_command],
+    'last': [last_command],
+    'score': [score_command],
+    'recall': [recall_command],
+    'quit': [quit_command],
+    'look': [look_command],
+    'motd': [motd_command],
+    'north': [north_command],
+    'east': [east_command],
+    'south': [south_command],
+    'west': [west_command],
+    'up': [up_command],
+    'down': [down_command],
+    'goto': [goto_command],
+    'cmds' : [cmds_command],
     # Add more commands here...
 }
 
@@ -295,9 +298,9 @@ def handle_player(player, msg):
 
     # Get the command function
     if command in shortcuts:
-        command_func = commands[shortcuts[command]]
+        command_func = commands[shortcuts[command]][0]
     elif command in full_commands:
-        command_func = commands[command] if command in commands else None
+        command_func = commands[command][0] if command in commands else None
     else:
         # Find the first command that starts with the command entered by the player
         matches = [cmd for cmd in commands if cmd.startswith(command)]
@@ -305,7 +308,7 @@ def handle_player(player, msg):
             if matches[0] in full_commands:
                 send_message(player, f"You need to type the full command '{matches[0]}' for it to work.\n")
                 return
-            command_func = commands[matches[0]]
+            command_func = commands[matches[0]][0]
         else:
             command_func = None
 
@@ -322,9 +325,5 @@ def move_player(player, old_room_vnum, new_room_vnum, msg_to_room=None, msg_to_p
     """move player from old_room to new_room, use room vnums"""
     
     send_room_message(old_room_vnum, msg_to_room, excluded_player=player, excluded_msg=msg_to_player)
-    old_room_instance = room_manager.get_room_by_vnum(old_room_vnum)
-    old_room_instance.remove_player(player)
-    player.move_to_room(new_room_vnum)
-    new_room_instance = room_manager.get_room_by_vnum(new_room_vnum)
-    new_room_instance.add_player(player)
+    player.move_to_room(room_manager.get_room_by_vnum(new_room_vnum))
     look_command(player, "")
