@@ -7,7 +7,7 @@ from datetime import datetime
 import time
 import random
 
-from mud_shared import dice_roll, colourize, log_info, log_error, check_flag
+from mud_shared import dice_roll, colourize, log_info, log_error, check_flag, first_to_upper
 import mud_consts
 
 # May want to consider if JSON is a better format for storing data
@@ -546,6 +546,12 @@ class Room:
     def remove_mob(self, mob):
         self.mob_list.discard(mob)
         
+    def add_object(self, obj):
+        self.object_list.add(obj)
+        
+    def remove_object(self, obj):
+        self.object_list.discard(obj)
+        
     def get_exit_names(self):
         exit_names = ["north", "east", "south", "west", "up", "down"]
         available_exits = []
@@ -575,10 +581,13 @@ class Room:
     def get_players(self):
         return self.player_list
     
-    def get_player_names(self, excluding_player=None):
+    def get_mobs(self):
+        return self.mob_list
+    
+    def get_player_names(self, excluded_player=None):
         player_names = []
         for player in self.player_list:
-            if player != excluding_player:
+            if player != excluded_player:
                 position_str = "."
                 if player.character.position == "Sleep":
                     position_str = " is sleeping here."
@@ -598,27 +607,13 @@ class Room:
         else:
             ret_str = ''.join(name for name in mob_names)
             return colourize(ret_str, "cyan")
-    
-    def get_mob_keywords(self):
-        mob_keywords = []
-        for mob in self.mob_list:
-            mob_keywords.append(mob.template.keywords)
-        return mob_keywords
-    
-    def get_mob_keywords_and_instances(self):
-        mob_keywords = []
-        for mob in self.mob_list:
-            mob_keywords.append((mob.template.keywords, mob))
-        return mob_keywords
-    
-    def get_mob_description_by_keyword(self, keyword):
-        for mob in self.mob_list:
-            if keyword in mob.template.keywords:
-                return mob.get_description()
-        return None
-    
-    def get_mob_instances(self):
-        return self.mob_list
+        
+    def get_object_names(self):
+        object_names = [obj.template.short_description for obj in self.object_list]
+        if not object_names:  # Check if the list is empty
+            return ""
+        else:
+            return '\n'.join('\t' + first_to_upper(name) for name in object_names) + '\n'
     
     def process_keyword(self, keyword):
         keyword = keyword.lower()
@@ -641,10 +636,8 @@ class Room:
         return self.process_search_output(number, matches)
     
     def search_players(self, keyword):
-        print(f"Searching for players with keyword: {keyword}")
         keyword, number = self.process_keyword(keyword)
         matches = [player for player in self.player_list if player.name.lower().startswith(keyword)]
-        print(f"Found matches: {matches}")
         return self.process_search_output(number, matches)
     
     def search_objects(self, keyword):
@@ -652,36 +645,16 @@ class Room:
         matches = [obj for obj in self.object_list if any(kw.startswith(keyword) for kw in obj.template.keywords.split())]
         return self.process_search_output(number, matches)
 
-    def search_exits(self, keyword):
+    def search_doors(self, keyword):
         keyword, number = self.process_keyword(keyword)
         matches = [door for door in self.doors if any(kw.startswith(keyword) for kw in self.doors[door]["keywords"].split())]
         return self.process_search_output(number, matches)
-        
-        
     
-    def get_door_keywords(self):
-        door_keywords = []
-        for door in self.doors:
-            door_keywords.append(self.doors[door]["keywords"])
-        return door_keywords
+    def search_extended_descriptions(self, keyword):
+        keyword, number = self.process_keyword(keyword)
+        matches = [extended_description for extended_description in self.extended_descriptions if any(kw.startswith(keyword) for kw in extended_description["keywords"].split())]
+        return self.process_search_output(number, matches)
     
-    def get_door_description_by_keyword(self, keyword):
-        for door in self.doors:
-            if keyword in self.doors[door]["keywords"]:
-                return self.doors[door]["description"]
-        return None
-    
-    def get_extended__description_keywords(self):
-        extended_keywords = []
-        for extended_description in self.extended_descriptions:
-            extended_keywords.append(extended_description["keywords"])
-        return extended_keywords
-    
-    def get_extended_description_by_keyword(self, keyword):
-        for extended_description in self.extended_descriptions:
-            if keyword in extended_description["keywords"]:
-                return extended_description["description"]
-        return None
 
 
 class ResetMob:
@@ -697,7 +670,10 @@ class ResetMob:
     def add_item(self, item):
         self.inventory.append(item)
         
-
+class ResetObject:
+    def __init__(self, obj_vnum, room_vnum):
+        self.obj_vnum = obj_vnum
+        self.room_vnum = room_vnum
 
 class Resets:
     def __init__(self):
@@ -708,6 +684,9 @@ class Resets:
         
     def add_mob_reset(self, ResetMob):
         self.mob_resets.append(ResetMob)
+        
+    def add_object_reset(self, ResetObject):
+        self.object_resets.append(ResetObject)
 
 class MobInstanceManager:
     def __init__(self):

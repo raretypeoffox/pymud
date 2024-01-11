@@ -37,30 +37,38 @@ def send_room_message_processing(player, target, msg):
     msg_to_room = msg
     msg_to_room = msg_to_room.replace("$D", target.name)
     
-    send_room_message(player.current_room.room_vnum, msg_to_room, [player, target], [msg_to_player, msg_to_target])
+    send_room_message(player.current_room, msg_to_room, [player, target], [msg_to_player, msg_to_target], prompt=False)
     
 
-def send_room_message(room_vnum, msg, excluded_player=None, excluded_msg=None):
+def send_room_message(room, msg, excluded_player=None, excluded_msg=None, prompt=True):
     if not isinstance(excluded_player, list):
         excluded_player = [excluded_player]
     if isinstance(excluded_msg, str):
         excluded_msg = [excluded_msg]
     
-    room = room_manager.get_room_by_vnum(room_vnum)
+    if room is None:
+        log_error("Room is None")
+        return
+    
     for player in room.get_players():
         if not player.character.is_awake() or player.character.NPC:
             continue
         if player not in excluded_player:
-            send_message(player, msg)
+            room_msg = msg
+            if prompt:
+                room_msg += "\n" + player.get_prompt()
+            send_message(player, room_msg)
         else:
             if excluded_msg is not None:
                 index = excluded_player.index(player)
                 if index < len(excluded_msg):
                     send_message(player, excluded_msg[index])
                 
-def send_global_message(msg):
+def send_global_message(msg, prompt=True):
     for player in player_manager.players:
         if player.loggedin:
+            if prompt:
+                msg += "\n" + player.get_prompt()
             send_message(player, msg)
         
 def send_message(player, msg):
@@ -71,7 +79,14 @@ def send_message(player, msg):
     except (BrokenPipeError, OSError):
         handle_disconnection(player)
 
-    
+def send_prompt_to_room(room , excluded_player=None, newline=True):
+    for player in room.get_players():
+        if player.character.NPC is False and player != excluded_player and player.character.is_awake():
+            msg = player.get_prompt()
+            if newline:
+                msg += "\n"
+            send_message(player, msg)
+              
 # Character login functions
     
 def handle_client_login(player, msg):
@@ -186,8 +201,8 @@ def finish_login(player, msg, log_msg):
     player.set_room(room)
     send_message(player, msg)
     log_info(log_msg)
-    send_global_message(colourize(f"[INFO]: {player.name} has entered the game.\n", "red"))
-    send_room_message(player.room_id, colourize(f"{player.name} suddenly appears in the room.\n", "green"), player)
+    send_global_message(colourize(f"\n[INFO]: {player.name} has entered the game.", "red"))
+    send_room_message(player.current_room, colourize(f"\n{player.name} suddenly appears in the room.", "green"), excluded_player=player)
     del player.reconnect_prompt
     del player.awaiting_reconnect_confirmation
     del player.awaiting_race
@@ -202,7 +217,8 @@ def handle_disconnection(player, msg=""):
     new_room_instance = room_manager.get_room_by_vnum(player.room_id)
     new_room_instance.remove_player(player)   
     if player_manager.disconnect_player(player, msg) and player.name != None:
-       send_global_message(colourize(f"[INFO]: {player.name} has left the game.\n", "red")) 
+       send_global_message(colourize(f"\n[INFO]: {player.name} has left the game.", "red")) 
+       send_room_message(player.current_room, colourize(f"\n{player.name} has left the game.", "green"), player)
     player.socket.close()
     
         

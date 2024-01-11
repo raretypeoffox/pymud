@@ -92,21 +92,6 @@ def check_flag(act_flags, flag):
     if flag != 0 and ((flag & (flag - 1)) != 0):
         raise ValueError("Flag must be a power of 2.")
     return bool(act_flags & flag)
-    
-def match_keyword(keywords, user_input):
-    ''' Attempts to match user input against a list of keywords.
-    Returns the first match if found, otherwise returns None.
-    '''
-    if isinstance(keywords, list) == False:
-        keywords = [keywords]
-    
-    user_input = user_input.lower()
-    for keyword in keywords:
-        split_line = keyword.lower().split()
-        for word in split_line:
-            if word.startswith(user_input):
-                return keyword
-    return None
 
 def is_NPC(player):
     if player.character is None:

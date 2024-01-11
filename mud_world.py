@@ -1,4 +1,4 @@
-from mud_objects import MobTemplate, Room, ResetMob, ObjectTemplate, MobInstance, ObjectInstance
+from mud_objects import MobTemplate, Room, ResetMob, ResetObject, ObjectTemplate, MobInstance, ObjectInstance
 from mud_objects import room_manager, mob_manager, object_manager, reset_manager, mob_instance_manager, object_instance_manager
 
 ### Parsing functions
@@ -190,7 +190,14 @@ def parse_reset(line):
 
             
         elif line[line_index].startswith('O'):
-            # handle 'O' case here
+            split_line = line[line_index].split()[2:]
+            obj_vnum, _, obj_room_vnum, *_ = split_line
+            obj_vnum = int(obj_vnum)
+            obj_room_vnum = int(obj_room_vnum)
+            
+            obj_reset = ResetObject(obj_vnum, obj_room_vnum)
+            reset_manager.add_object_reset(obj_reset)
+            
             pass
         elif line[line_index].startswith('P'):
             # handle 'P' case here
@@ -349,6 +356,24 @@ def reset_world():
         else:
             print(f"Mob {mob_reset.mob_vnum} not found")
 
+    for obj_reset in reset_manager.object_resets:
+        obj_template = object_manager.get_object(obj_reset.obj_vnum)
+        if obj_template is not None:
+            room = room_manager.get_room_by_vnum(obj_reset.room_vnum)
+            if room is not None:
+                # check if obj is already in room
+                add_obj = True
+                for obj in room.object_list:
+                    if obj.vnum == obj_reset.obj_vnum:
+                        add_obj = False
+                if add_obj:
+                    obj = ObjectInstance(obj_template)
+                    object_instance_manager.add_object_instance(obj)
+                    room.add_object(obj)
+            else:
+                print(f"Room {obj_reset.room_vnum} not found")
+        else:
+            print(f"Object {obj_reset.obj_vnum} not found")
 
 if __name__ == '__main__':
     build_world()

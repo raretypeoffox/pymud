@@ -3,7 +3,7 @@ import time
 from mud_shared import log_info, log_error, dice_roll, random_percent, colourize, first_to_upper, report_mob_health
 
 from mud_world import mob_instance_manager
-from mud_comms import send_room_message_processing, send_message
+from mud_comms import send_room_message_processing, send_message, send_room_message, send_prompt_to_room
 
 from mud_objects import combat_manager
 
@@ -65,17 +65,16 @@ def deal_damage(attacker, defender, damage, msg, type=0):
         if defender == NPC:
             mob_level = NPC.character.level
             process_mob_death(PC, NPC)
-            msg = colourize(f"{first_to_upper(defender.name)} is dead!\n", "yellow")
-            send_message(PC, msg)
+            msg = colourize(f"{first_to_upper(defender.name)} is dead!!!\n", "yellow")
+            send_room_message(PC.current_room, msg, prompt=False)
+            send_prompt_to_room(PC.current_room, excluded_player=PC, newline=False)
             process_victory(PC, mob_level)
-            
         elif attacker == NPC:
-            msg = f"You are dead!\n"
+
             # TODO PC Death
-            msg += "\n\n\nYou are magically healed!"
+            send_room_message(PC.current_room, colourize(f"{PC.name} is dead!!!\n", "red"), excluded_player=PC, excluded_msg=colourize("You are dead!!!", "red"))
+            send_message(PC, f"\n\n\nYou are magically healed!\n{PC.get_prompt()}")
             PC.character.current_hitpoints = PC.character.max_hitpoints
-            msg += PC.get_prompt()
-            send_message(PC, msg)
             return
         else:
             log_error("Unexpected result, neither PC nor NPC!")
@@ -146,11 +145,24 @@ def multi_hit(attacker, defender, type=0):
 def combat_round(combatant_one, combatant_two, type=0):
         
     multi_hit(combatant_one, combatant_two, type)
-       
-    # PC, NPC = return_PC_and_NPC(combatant_one, combatant_two)
+     
+
+def attempt_flee(combantant_one, combatant_two):
+    # add random chance to flee
+    if not combat_manager.in_combat(combantant_one):
+        send_message(combantant_one, "You are not in combat!\n")
+        return False
     
-    # if PC.character.is_dead() or NPC.character.is_dead():
-    #     return
+    flee_chance = 0.5
+    if random_percent() < flee_chance:
+        send_room_message(combantant_one, f"{combantant_one.name} flees in terror!\n")
+        combat_manager.end_combat(combantant_one, combatant_two)
+        combat_manager.end_combat(combatant_two, combantant_one)
+        send_message(combantant_one, combantant_one.get_prompt())
+        return True
+    else:
+        send_message(combantant_one, "You fail to flee!\n")
+        return False
     
 
 def test_kill_mob(player, mob):
@@ -159,6 +171,8 @@ def test_kill_mob(player, mob):
     combat_manager.start_combat(mob, player)
     combat_round(player, mob)
     send_message(player, report_mob_health(combat_manager.get_current_target(player)))
+
+    send_prompt_to_room(player.current_room, excluded_player=player)
 
 
 def combat_loop():
@@ -173,10 +187,16 @@ def combat_loop():
         combat_round(combatant, combat_manager.get_current_target(combatant))
            
     # At the end of the round, send the mob's health and prompt to all players
+    rooms_with_players = set()
     for combatant in combat_manager.get_characters_in_combat():
         if combatant is None or combat_manager.get_current_target(combatant) is None:
             continue
         if combatant.character.NPC is False:
             send_message(combatant, report_mob_health(combat_manager.get_current_target(combatant)))
-            send_message(combatant, combatant.get_prompt() + "\n")
+            rooms_with_players.add(combatant.current_room)
+    
+    # Make sure even folks not in combat get a prompt after the combat round is over       
+    for room in rooms_with_players:
+        send_prompt_to_room(room)
+
 
