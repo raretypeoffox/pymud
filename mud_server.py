@@ -9,7 +9,7 @@ VERSION = "0.0.1"
 
 from mud_comms import handle_new_client, handle_shutdown, player_manager, handle_disconnection, handle_client_login
 from mud_handler import handle_player
-from mud_world import build_world, reset_world
+from mud_world import build_world, reset_world, build_objects
 from mud_shared import log_info, log_error
 from mud_combat import combat_loop
 from mud_ticks import tick_loop, mini_tick_loop
@@ -84,6 +84,7 @@ def main():
     log_info(f"Booting up PyMud v{VERSION}...")
     build_world()
     reset_world()
+    build_objects()
     start_server()
 
 if __name__ == '__main__':

@@ -324,9 +324,6 @@ def build_world():
         parse_are_file(full_path)
     
     print(f"World built ({time.time() - start_time:.2f}s)")
-    start_time = time.time()
-    object_instance_manager.load_objects()
-    print(f"Objects loaded from database ({time.time() - start_time:.2f}s)")
 
 def reset_world():
     print("Reset world...")
@@ -383,6 +380,13 @@ def reset_world():
         else:
             print(f"Object {obj_reset.obj_vnum} not found")
 
+def build_objects():
+    start_time = time.time()
+    object_instance_manager.load_objects()
+    print(f"Objects loaded from database ({time.time() - start_time:.2f}s)")
+
+
 if __name__ == '__main__':
     build_world()
     reset_world()
+    build_objects()

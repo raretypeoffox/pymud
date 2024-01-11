@@ -117,3 +117,18 @@ def report_mob_health(NPC):
         log_error("report_mob_health() called with dead NPC!")
     msg = colourize(first_to_upper(msg), "yellow")
     return msg
+
+def process_keyword(keyword):
+    keyword = keyword.lower()
+    # Split the keyword into number and actual keyword if applicable
+    number, keyword = (keyword.split('.', 1) + [None])[:2] if '.' in keyword else (None, keyword)
+    number = int(number) - 1 if number is not None and number.isdigit() else None
+    return keyword, number
+
+def process_search_output(number, matches):
+    if number is None and matches:
+        return matches[0]
+    elif number is not None and number < len(matches):
+        return matches[number]
+    else:
+        return None

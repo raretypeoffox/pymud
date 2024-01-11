@@ -108,9 +108,11 @@ and it has keen ears that twitch at the slightest sound.
 #OBJECTS
 
 #3001
-scroll magic missile~
-a scroll of magic missile~
-On the ground lies a scroll, its edges glowing with a faint, pulsating light.~
+scroll mysterious glowing magic missile~
+a mysterious glowing scroll~
+On the ground lies a scroll, its edges glowing with a faint, pulsating light.
+
+Perhaps you should "study scroll"...~
 ~
 2 0 0
 0 0 0 0
@@ -205,12 +207,12 @@ cliffs are jagged, carved by wind and waves over centuries. From this
 vantage point, you can see the curvature of the coastline and the 
 endless waters that stretch out towards the horizon. To the north, 
 a small, barely noticeable trail weaves its way through the underbrush, 
-inviting the curious to explore further inland.
+inviting the curious to explore further inland. 
 ~
 3000 0 0
 D0
-~
-~
+A winding path towards the north, your curiosity makes you want to explore it.~
+winding path~
 0 0 3007
 D1
 ~
@@ -254,14 +256,14 @@ D0
 D2
 ~
 ~
-0 0 3006
+0 0 3005
 S
 #3008
 Whispering Cave Passage~
   The trail leads into a small, dimly lit cave. Water droplets echo as they fall 
 from the cave's ceiling, creating a serene, if mysterious atmosphere. The walls 
 are cool and slightly damp to the touch, and the cave narrows as it curves westward, 
-hinting at secrets hidden deeper within the earth.
+hinting at secrets hidden deeper within the earth. There is an ETCHing on the wall.
 ~
 3006 0 0
 D2
@@ -272,6 +274,11 @@ D3
 ~
 ~
 0 0 3009
+E
+etching~
+Squinting closer, you see a depiction of a man casting a magic missile. Perhaps this
+scroll will allow you to do something similar?
+~
 S
 #3009
 Emergence into Lush Forest~

@@ -9,7 +9,7 @@ import random
 import uuid
 import json
 
-from mud_shared import dice_roll, colourize, log_info, log_error, check_flag, first_to_upper
+from mud_shared import dice_roll, colourize, log_info, log_error, check_flag, first_to_upper, process_keyword, process_search_output
 import mud_consts
 
 # May want to consider if JSON is a better format for storing data
@@ -322,6 +322,11 @@ class Player:
     def remove_inventory(self, obj_uuid):
         self.inventory.remove(obj_uuid)
         del self.inventory_list[obj_uuid]
+        
+    def search_objects(self, keyword):
+        keyword, number = process_keyword(keyword)
+        matches = [obj for obj in self.inventory_list.values() if any(kw.startswith(keyword) for kw in obj.template.keywords.split())]
+        return process_search_output(number, matches)
 
     def get_inventory_description(self, player_name=None):
         if player_name is None:
@@ -599,6 +604,13 @@ class RoomManager:
     def get_rooms_by_attribute(self, attribute_name, value):
         return [room for room in self.rooms.values() if getattr(room, attribute_name, None) == value]
 
+    def __str__(self):
+        msg = ""
+        for room in self.rooms.values():
+            msg += f"Room {room.vnum}: {room.name}\n"
+        return msg
+    
+
 class MobTemplate:
     def __init__(self, vnum, keywords, short_desc, long_desc, desc, act_flags, aff_flags, align, level, hitroll, ac, hitdice_num, hitdice_size, hitdice_bonus, damdice_num, damdice_size, damdice_bonus, gold, xp, sex):
         self.vnum = vnum
@@ -762,51 +774,45 @@ class Room:
             return colourize(ret_str, "cyan")
         
     def get_object_names(self):
-        object_names = [obj.template.short_description for obj in self.object_list]
-        if not object_names:  # Check if the list is empty
-            return ""
-        else:
-            return '\n'.join('\t' + first_to_upper(name) for name in object_names) + '\n'
-    
-    def process_keyword(self, keyword):
-        keyword = keyword.lower()
-        # Split the keyword into number and actual keyword if applicable
-        number, keyword = (keyword.split('.', 1) + [None])[:2] if '.' in keyword else (None, keyword)
-        number = int(number) - 1 if number is not None and number.isdigit() else None
-        return keyword, number
-    
-    def process_search_output(self, number, matches):
-        if number is None and matches:
-            return matches[0]
-        elif number is not None and number < len(matches):
-            return matches[number]
-        else:
-            return None
-    
+        if len(self.object_list) == 0:
+            return ""    
+        
+        inventory_items = {}
+        for obj in self.object_list:
+            if obj.name in inventory_items:
+                inventory_items[obj.name] += 1
+            else:
+                inventory_items[obj.name] = 1
+        msg = ""
+        for name, count in inventory_items.items():
+            count_str = f"({count:2})" if count > 1 else "     "
+            msg += f"  {count_str} {first_to_upper(name)}\n"
+                
+        return msg
     def search_mobs(self, keyword):
-        keyword, number = self.process_keyword(keyword)
+        keyword, number = process_keyword(keyword)
         matches = [mob for mob in self.mob_list if any(kw.startswith(keyword) for kw in mob.template.keywords.split())]
-        return self.process_search_output(number, matches)
+        return process_search_output(number, matches)
     
     def search_players(self, keyword):
-        keyword, number = self.process_keyword(keyword)
+        keyword, number = process_keyword(keyword)
         matches = [player for player in self.player_list if player.name.lower().startswith(keyword)]
-        return self.process_search_output(number, matches)
+        return process_search_output(number, matches)
     
     def search_objects(self, keyword):
-        keyword, number = self.process_keyword(keyword)
+        keyword, number = process_keyword(keyword)
         matches = [obj for obj in self.object_list if any(kw.startswith(keyword) for kw in obj.template.keywords.split())]
-        return self.process_search_output(number, matches)
+        return process_search_output(number, matches)
 
     def search_doors(self, keyword):
-        keyword, number = self.process_keyword(keyword)
+        keyword, number = process_keyword(keyword)
         matches = [door for door in self.doors if any(kw.startswith(keyword) for kw in self.doors[door]["keywords"].split())]
-        return self.process_search_output(number, matches)
+        return process_search_output(number, matches)
     
     def search_extended_descriptions(self, keyword):
-        keyword, number = self.process_keyword(keyword)
+        keyword, number = process_keyword(keyword)
         matches = [extended_description for extended_description in self.extended_descriptions if any(kw.startswith(keyword) for kw in extended_description["keywords"].split())]
-        return self.process_search_output(number, matches)
+        return process_search_output(number, matches)
     
 
 
@@ -1009,6 +1015,7 @@ class ObjectInstance:
        
     def load(self):
         if self.location_type == "room":
+            self.location = int(self.location)
             room = room_manager.get_room_by_vnum(self.location)
             if room is not None:
                 self.location_instance = room
@@ -1048,15 +1055,14 @@ class ObjectInstance:
         if self not in player.current_room.object_list:
             log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is not in room {player.current_room.vnum}")
             return False
-        
-        if self.state == mud_consts.OBJ_STATE_NORMAL:
-            self.update_state(mud_consts.OBJ_STATE_INVENTORY)
-        elif self.state != mud_consts.OBJ_STATE_SPECIAL or self.state != mud_consts.OBJ_STATE_QUEST:    
+  
+        if self.state == mud_consts.OBJ_STATE_INVENTORY or self.state == mud_consts.OBJ_STATE_LOCKER or self.state == mud_consts.OBJ_STATE_EQUIPPED:
             log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
             return False
         
         player.current_room.remove_object(self)
         player.add_inventory(self.uuid)
+        self.update_state(mud_consts.OBJ_STATE_INVENTORY)
         self.update_location("player", player.name, player)
         self.save()
         return True
@@ -1068,15 +1074,15 @@ class ObjectInstance:
             log_error(f"Object drop: object {self.vnum}, {self.name} not in {player.name} inventory")
             return False
         
-        if self.state == mud_consts.OBJ_STATE_INVENTORY:
-            self.update_state(mud_consts.OBJ_STATE_DROPPED)
-        elif self.state != mud_consts.OBJ_STATE_SPECIAL or self.state != mud_consts.OBJ_STATE_QUEST:    
-            log_error(f"Object drop: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
+        if self.state == mud_consts.OBJ_STATE_LOCKER or self.state == mud_consts.OBJ_STATE_EQUIPPED:
+            log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
             return False
 
+        self.update_state(mud_consts.OBJ_STATE_DROPPED)
+        
         player.current_room.add_object(self)
         player.remove_inventory(self.uuid)
-        self.update_locate("room", player.current_room.vnum, player.current_room)
+        self.update_location("room", player.current_room.vnum, player.current_room)
         self.save()
         return True
         
