@@ -14,6 +14,11 @@ def kill_command(player, argument):
         send_message(player, "You must specify a mob name.\n")
         return
     
+    current_position = player.character.get_position()
+    if current_position != "Stand":
+        send_message(player, "You need to be standing first!\n")
+        return 
+    
     mob = player.current_room.search_mobs(argument)
 
     if mob is None:
@@ -55,6 +60,76 @@ def rest_command(player, argument):
     
     player.character.set_position("Rest")
     send_room_message(player.current_room, colourize(f"{player.name} sits down and rests.\n", "green"), excluded_player=player, excluded_msg=colourize("You sit down and rest.\n", "green"))
+
+def inventory_command(player, argument):
+    send_message(player, player.get_inventory_description())
+
+def get_command(player, argument):
+    if argument == '':
+        send_message(player, "Get what?\n")
+        return
+    
+    current_position = player.character.get_position()
+    if current_position == "Sleep":
+        send_message(player, "You are sleeping!\n")
+        return
+    
+    if len(argument.split()) > 1:
+        # todo, implement bags
+        pass
+
+    else: # picking up from ground
+        if argument.split()[0].lower() == 'all':
+            # todo
+            pass
+    
+
+    
+        object = player.current_room.search_objects(argument)
+        
+        if object is None:
+            send_message(player, "No item with that name found.\n")
+            return
+        
+        # if object.is_takeable() == False:
+        #     send_message(player, "You can't take that.\n")
+        #     return
+        
+        # if player.character.is_carrying(object):
+        #     send_message(player, "You are already carrying that.\n")
+        #     return
+        
+        # if player.character.can_carry(object) == False:
+        #     send_message(player, "You can't carry any more.\n")
+        #     return
+        
+        object.pickup(player)
+        send_message(player, f"You get {object.name}.\n")
+        send_room_message(player.current_room, f"{player.name} gets {object.name}.\n", excluded_player=player)
+
+def drop_command(player, argument):
+    if argument == '':
+        send_message(player, "Drop what?\n")
+        return
+    
+    current_position = player.character.get_position()
+    if current_position == "Sleep":
+        send_message(player, "You are sleeping!\n")
+        return
+    
+    if argument.split()[0].lower() == 'all':
+        # todo
+        pass
+    
+    object = player.search_objects(argument)
+    
+    if object is None:
+        send_message(player, "No object with that name found.\n")
+        return
+    
+    object.drop(player)
+    send_message(player, f"You drop {object.name}.\n")
+    send_room_message(player.current_room, f"{player.name} drops {object.name}.\n", excluded_player=player)
 
 def say_command(player, argument):
     if argument == '':
@@ -279,7 +354,7 @@ def player_movement(player, direction):
     if room_instance is not None:
         if direction in room_instance.doors:
             if room_instance.doors[direction]["locks"] == 0:
-                move_player(player, room_instance.room_vnum, room_instance.doors[direction]["to_room"], msg_to_room=colourize(f"{first_to_upper(player.name)} leaves to the {mud_consts.DIRECTIONS[direction]}.\n", "green"))
+                move_player(player, room_instance.vnum, room_instance.doors[direction]["to_room"], msg_to_room=colourize(f"{first_to_upper(player.name)} leaves to the {mud_consts.DIRECTIONS[direction]}.\n", "green"))
                 send_room_message(room_manager.get_room_by_vnum(room_instance.doors[direction]["to_room"]) , colourize(f"{first_to_upper(player.name)} arrives from the {mud_consts.DIRECTIONS_REVERSE[direction]}.\n", "green"), excluded_player=player)
             else:
                 send_message(player, "The door is locked.\n")
@@ -343,7 +418,10 @@ commands = {
     'stand': [stand_command],
     'wake': [stand_command],
     'rest': [rest_command],
-    'sleep': [sleep_command], 
+    'sleep': [sleep_command],
+    'inventory' : [inventory_command],
+    'get': [get_command],
+    'drop': [drop_command],
     'say': [say_command],
     'chat' : [chat_command],
     'who': [who_command],
@@ -387,6 +465,7 @@ def handle_player(player, msg):
         'u': 'up',
         'd': 'down',
         'l': 'look',
+        'i': 'inventory',
         # Add more shortcuts here...
     }
 

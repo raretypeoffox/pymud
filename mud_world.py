@@ -1,3 +1,5 @@
+import time
+
 from mud_objects import MobTemplate, Room, ResetMob, ResetObject, ObjectTemplate, MobInstance, ObjectInstance
 from mud_objects import room_manager, mob_manager, object_manager, reset_manager, mob_instance_manager, object_instance_manager
 
@@ -101,7 +103,7 @@ def parse_object(lines):
     offset += offset_add
     current_object.long_description, offset_add = parse_multi_line(lines[offset:])
     offset += offset_add
-    _, offset_add = parse_multi_line(lines[offset:]) # action description not used
+    current_object.action_description, offset_add = parse_multi_line(lines[offset:]) 
     offset += offset_add
     
     current_object.item_type, current_object.extra_flags, current_object.wear_flags = lines[offset].split()
@@ -136,10 +138,9 @@ def parse_object(lines):
     # print("Object", lines)
 
 def parse_room(lines):
-    room_vnum = int(lines[0][1:])
-    current_room = Room(room_vnum)
+    vnum = int(lines[0][1:])
+    current_room = Room(vnum)
     current_room.name = lines[1][:-1]
-    print(current_room.name)
     current_room.description, offset = parse_multi_line(lines[2:])
     offset+=2
     
@@ -312,6 +313,7 @@ def load_area_files_list(file_path):
     return are_files
 
 def build_world():
+    start_time = time.time()
     print("Building world...")
     area_list_path = 'new_world/area.lst'  # Update this path to your area.lst file location
     are_files = load_area_files_list(area_list_path)
@@ -320,6 +322,11 @@ def build_world():
         full_path = f'new_world/{are_file}'  # Update the path as necessary
         print(f"\tLoading {full_path}...")
         parse_are_file(full_path)
+    
+    print(f"World built ({time.time() - start_time:.2f}s)")
+    start_time = time.time()
+    object_instance_manager.load_objects()
+    print(f"Objects loaded from database ({time.time() - start_time:.2f}s)")
 
 def reset_world():
     print("Reset world...")
@@ -341,14 +348,14 @@ def reset_world():
                             obj_template = object_manager.get_object(obj_vnum)
                             if obj_template is not None:
                                 obj = ObjectInstance(obj_template)
-                                object_instance_manager.add_object_instance(obj)
+                                object_instance_manager.add_object(obj)
                                 mob.equipment.equip(slot, obj)
                 if mob_reset.inventory:
                     for obj_vnum in mob_reset.inventory:
                         obj_template = object_manager.get_object(obj_vnum)
                         if obj_template is not None:
                             obj = ObjectInstance(obj_template)
-                            object_instance_manager.add_object_instance(obj)
+                            object_instance_manager.add_object(obj)
                             mob.add_item(obj)
    
             else:
@@ -368,8 +375,9 @@ def reset_world():
                         add_obj = False
                 if add_obj:
                     obj = ObjectInstance(obj_template)
-                    object_instance_manager.add_object_instance(obj)
+                    object_instance_manager.add_object(obj)
                     room.add_object(obj)
+                    obj.update_location("room", room.vnum, room)
             else:
                 print(f"Room {obj_reset.room_vnum} not found")
         else:

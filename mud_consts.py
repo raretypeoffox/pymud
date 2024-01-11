@@ -213,3 +213,34 @@ ACT_UNUSED1 = 8		    # no longer used
 ACT_UNUSED2 = 16		  # no longer used
 ACT_AGGRESSIVE = 32		# Attacks PC's
 ACT_WIMPY = 128		  # Flees when hurt
+
+OBJ_STATE_NORMAL = 0  # For standard reset items, won't save
+OBJ_STATE_DROPPED = 1 # For items dropped on the ground, save but will imp after time
+OBJ_STATE_INVENTORY = 2  # For items in inventory, will save
+OBJ_STATE_LOCKER = 3  # For items in lockers, will save
+OBJ_STATE_EQUIPPED = 4  # For items equipped, will save
+OBJ_STATE_SPECIAL = 5  # For items that are special, will save (even if on ground) and not imp
+OBJ_STATE_QUEST = 6  # For items that are quest items, will save (even if on ground) and not imp
+
+OBJ_STATE_MAX = 7 # For checking if valid state, not a state itself (add new states above and increment max)
+
+
+DIR_NORTH = 0
+DIR_EAST = 1
+DIR_SOUTH = 2
+DIR_WEST = 3
+DIR_UP = 4
+DIR_DOWN = 5
+
+# Room sector flags
+SECT_INSIDE = 0
+SECT_CITY = 1
+SECT_FIELD = 2
+SECT_FOREST = 3
+SECT_HILLS = 4
+SECT_MOUNTAIN = 5
+SECT_WATER_SWIM = 6
+SECT_WATER_NOSWIM = 7
+SECT_BEACH = 8
+SECT_AIR = 9
+SECT_DESERT = 10

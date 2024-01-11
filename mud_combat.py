@@ -33,11 +33,11 @@ def process_victory(player, mob_level):
     
     if level_diff < 5:
         num_dice = 5 - level_diff
-        # print(f"XP roll: {num_dice}d10+{num_dice * 5}")
+        
         # bonus num_dice for being under level 20
         if player.character.level < 20:
-            level_bonus = (20 - player.character.level) // 2
-        xp = dice_roll(num_dice, 10, ((num_dice + level_bonus) * 5))
+            low_level_bonus = (20 - player.character.level) // 2
+        xp = dice_roll(num_dice, 10, ((num_dice + low_level_bonus) * 5))
     else:
         xp = 0
     
@@ -47,7 +47,6 @@ def process_victory(player, mob_level):
         # Level!
         send_message(player, colourize(gain_msg,"cyan"))
         
-    
     send_message(player, player.get_prompt())
 
 def deal_damage(attacker, defender, damage, msg, type=0):

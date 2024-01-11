@@ -6,6 +6,8 @@ import pickle
 from datetime import datetime
 import time
 import random
+import uuid
+import json
 
 from mud_shared import dice_roll, colourize, log_info, log_error, check_flag, first_to_upper
 import mud_consts
@@ -24,6 +26,7 @@ class PlayerDatabase:
                 created TEXT,
                 lastlogin TEXT,
                 title TEXT,
+                inventory TEXT,
                 character BLOB
             )
         ''')
@@ -32,23 +35,25 @@ class PlayerDatabase:
     def save_player(self, player):
         with self.lock:
             character_data = pickle.dumps(player.character)
+            inventory = [str(i) for i in player.inventory]
             self.cursor.execute('''
-                INSERT OR REPLACE INTO players (name, room_id, current_recall, created, lastlogin, title, character)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (player.name, player.room_id, player.current_recall, player.created, player.lastlogin, player.title, character_data))
+                INSERT OR REPLACE INTO players (name, room_id, current_recall, created, lastlogin, title, inventory, character)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (player.name, player.room_id, player.current_recall, player.created, player.lastlogin, player.title, json.dumps(inventory), character_data))
             self.connection.commit()
 
     def load_player(self, name):
         with self.lock:
             self.cursor.execute('''
-            SELECT room_id, current_recall, created, lastlogin, title, character FROM players WHERE LOWER(name) = LOWER(?)
+            SELECT room_id, current_recall, created, lastlogin, title, inventory, character FROM players WHERE LOWER(name) = LOWER(?)
             ''', (name.lower(),))
             result = self.cursor.fetchone()
             if result is None:
                 log_error(f"Error loading player data for {name}")
                 return None
             else:
-                room_id, current_recall, created, lastlogin, title, character_data = result
+                room_id, current_recall, created, lastlogin, title, inventory, character_data = result
+                inventory = set(uuid.UUID(i) for i in json.loads(inventory))
                 character = pickle.loads(character_data)
                 return {
                 'name': name,
@@ -57,6 +62,7 @@ class PlayerDatabase:
                 'created': created,
                 'lastlogin': lastlogin,
                 'title': title,
+                'inventory' : inventory,
                 'character': character
                 }
     
@@ -71,8 +77,104 @@ class PlayerDatabase:
             else:
                 created, lastlogin = result
                 return datetime.strptime(created, '%Y-%m-%d %H:%M:%S.%f'), datetime.strptime(lastlogin, '%Y-%m-%d %H:%M:%S.%f')
-    
+
+class ObjectDatabase:
+    def __init__(self, db_path):
+        self.conn = sqlite3.connect(db_path)
+        self.cursor = self.conn.cursor()
+        self.create_table()
+
+    def create_table(self):
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS objects (
+                uuid TEXT PRIMARY KEY,
+                vnum INTEGER,
+                name TEXT,
+                description TEXT,
+                action_description TEXT,
+                state INTEGER,
+                insured TEXT,
+                location TEXT,
+                location_type TEXT,
+                max_hitpoints INTEGER,
+                current_hitpoints INTEGER,
+                enchantments TEXT
+            )
+        """)
+
+    def save_object(self, obj):
+        self.cursor.execute("""
+            INSERT OR REPLACE INTO objects VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            str(obj.uuid),
+            obj.vnum,
+            obj.name,
+            obj.description,
+            obj.action_description,
+            obj.state,
+            obj.insured,
+            obj.location,
+            obj.location_type,
+            obj.max_hitpoints,
+            obj.current_hitpoints,
+            json.dumps(obj.enchantments)
+        ))
+        self.conn.commit()
+        
+    def save_objects(self, objects):
+        if self.conn is None:
+            log_error("Object DB Error: Database connection is not open")
+            return
+
+        data = [(str(obj.uuid), obj.vnum, obj.name, obj.description, obj.action_description, obj.state, obj.insured, obj.location, obj.location_type, obj.max_hitpoints, obj.current_hitpoints, json.dumps(obj.enchantments)) for obj in objects]
+
+        self.cursor.executemany("""
+            INSERT OR REPLACE INTO objects VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, data)
+
+        self.conn.commit()
+
+    def load_objects(self):
+        if self.conn is None:
+            log_error("Object DB Error: Database connection is not open")
+            return []
+        self.cursor.execute("SELECT * FROM objects")
+        rows = self.cursor.fetchall()
+        objects = []
+        for row in rows:
+            obj = ObjectInstance(object_manager.get_object(row[1]))
+            if obj is None:
+                log_error(f"Object DB Error: no object template found with vnum {row[0]}")
+                continue
+            try:
+                obj.uuid = uuid.UUID(row[0])
+            except ValueError:
+                log_error(f"Object DB Error: Invalid UUID: {row[0]}")
+                continue
+            obj.vnum = row[1]
+            if row[2] is not None:
+                obj.name = row[2]
+            if row[3] is not None:
+                obj.description = row[3]
+            if row[4] is not None:
+                obj.action_description = row[4]
+            obj.state = row[5]
+            obj.insured = row[6]
+            obj.location = row[7]
+            obj.location_type = row[8]
+            obj.max_hitpoints = row[9]
+            obj.current_hitpoints = row[10]
+            try:
+                obj.enchantments = json.loads(row[11])
+            except json.JSONDecodeError:
+                log_error(f"Object DB Error: Invalid JSON in enchantments: {row[11]}")
+                continue
+            # print(obj)
+            objects.append(obj)
+        return objects
+
 player_db = PlayerDatabase('player_database.db')
+object_db = ObjectDatabase('object_database.db')
 
 class PlayerManager:
     def __init__(self):
@@ -100,8 +202,10 @@ class PlayerManager:
         return None
     
     def save_all_players(self):
+        start_time = time.time()
         for player in self.players:
             player_db.save_player(player)
+        log_info(f"Player Manager: saved all players in {time.time() - start_time:.2f} seconds")
 
     def disconnect_player(self, player, msg=""):
         if msg:
@@ -132,6 +236,9 @@ class Player:
         self.current_recall = 0
         self.character = Character()
         
+        self.inventory = set() # set of object UUIDs (saved)
+        self.inventory_list = {} # key: UUID, value: ObjectInstance (not saved)
+        
         self.created = datetime.now()
         self.lastlogin = datetime.now()
         self.title = ""
@@ -149,9 +256,19 @@ class Player:
         self.created = player_data['created']
         self.lastlogin = datetime.now()
         self.title = player_data['title']
+        self.inventory = player_data['inventory']
         self.character = player_data['character']
+        
+        # load inventory_list
+        for uuid in self.inventory:
+            print(f"Loading object {uuid}")
+            obj = object_instance_manager.get_object_by_uuid(uuid)
+            print(f"Loaded object {obj}")
+            if obj is not None:
+                self.inventory_list[uuid] = obj
+        
         return True
-    
+        
     def save_exists(self):
         return player_db.load_player(self.name) is not None
 
@@ -159,7 +276,7 @@ class Player:
         self.current_room = room
 
     def move_to_room(self, new_room):
-        self.room_id = new_room.room_vnum
+        self.room_id = new_room.vnum
         if self.current_room is not None:
             self.current_room.remove_player(self)
         if new_room is not None:
@@ -196,6 +313,39 @@ class Player:
     def get_AC(self):
         return self.character.ac
     
+    def add_inventory(self, obj_uuid):
+        self.inventory.add(obj_uuid)
+        obj = object_instance_manager.get_object_by_uuid(obj_uuid)
+        if obj is not None:
+            self.inventory_list[obj_uuid] = obj
+        
+    def remove_inventory(self, obj_uuid):
+        self.inventory.remove(obj_uuid)
+        del self.inventory_list[obj_uuid]
+
+    def get_inventory_description(self, player_name=None):
+        if player_name is None:
+            if len(self.inventory_list) == 0:
+                return "You are not carrying anything.\n"    
+            msg = "You are carrying:\n"
+        else:
+            if len(self.inventory_list) == 0:
+                return f"{player_name} is not carrying anything.\n"
+            msg = f"{player_name} is carrying:\n"
+        
+        inventory_items = {}
+        for obj in self.inventory_list.values():
+            if obj.name in inventory_items:
+                inventory_items[obj.name] += 1
+            else:
+                inventory_items[obj.name] = 1
+
+        for name, count in inventory_items.items():
+            count_str = f"({count:2})" if count > 1 else "     "
+            msg += f"  {count_str} {name}\n"
+                
+        return msg
+    
         
 class Character:
     def __init__(self, NPC=False):
@@ -204,7 +354,7 @@ class Character:
         self.origin = ""
             
         self.NPC = NPC
-        self.inventory = []
+        self.inventory = set() # set of object UUIDs
         self.equipment = Equipment()
         self.max_hitpoints = 30
         self.current_hitpoints = self.max_hitpoints
@@ -233,8 +383,7 @@ class Character:
         self.gold = 0
         
         self.racials = []
-        
-
+   
     def get_prompt(self):
         c = colourize
         return c("\n<HP: ", "green") + c(f"{self.current_hitpoints}", "white") + c(f"/{self.max_hitpoints}", "green") + c(" MP: ", "green") + c(f"{self.current_mana}", "white") + c(f"/{self.max_mana}", "green") + c(" SP: ", "green") + c(f"{self.current_stamina}", "white") + c(f"/{self.max_stamina}", "green") + c(f" {self.tnl-self.xp}", "yellow") + c("> \n", "green")
@@ -332,6 +481,7 @@ class Character:
             self.regen_hp(REGEN_HP_RATE/10)
             self.regen_mana(REGEN_MANA_RATE/10)
             self.regen_stamina(REGEN_STAMINA_RATE/4)
+        
 
     # for debugging
     def __str__(self):
@@ -426,21 +576,22 @@ class ObjectManager:
 
     def get_all_objects(self):
         return self.objects.values()
+    
         
 class RoomManager:
     def __init__(self):
         self.rooms = {}
     
     def add_room(self, room):
-        self.rooms[room.room_vnum] = room
+        self.rooms[room.vnum] = room
         
-    def get_room_by_vnum(self, room_vnum):
-        ''' Returns a room object by its room_vnum, otherwise returns None'''
-        return self.rooms.get(room_vnum)
+    def get_room_by_vnum(self, vnum):
+        ''' Returns a room object by its vnum, otherwise returns None'''
+        return self.rooms.get(vnum)
 
-    def remove_room(self, room_vnum):
-        if room_vnum in self.rooms:
-            del self.rooms[room_vnum]
+    def remove_room(self, vnum):
+        if vnum in self.rooms:
+            del self.rooms[vnum]
 
     def get_all_rooms(self):
         return self.rooms.values()
@@ -487,7 +638,7 @@ class ObjectTemplate:
         self.keywords = ""
         self.short_description = ""
         self.long_description = ""
-        # Not used: self.action_description = ""
+        self.action_description = ""
         self.item_type = 0
         self.extra_flags = 0
         self.wear_flags = 0
@@ -499,12 +650,14 @@ class ObjectTemplate:
         self.cost = 0
         # Note used: self.cost_per_day = 0
         # E and A are not used for now
+        
+        self.max_hitpoints = 100 # in the future, can use this for object condition
     
 
         
 class Room:
-    def __init__(self, room_vnum):
-        self.room_vnum = room_vnum
+    def __init__(self, vnum):
+        self.vnum = vnum
         self.name = ""
         self.description = ""
         self.area_number = 0
@@ -771,17 +924,54 @@ class MobInstance:
 class ObjectInstanceManager:
     def __init__(self):
         self.object_instances = {} # vnum: [object_instance1, object_instance2, ...]
+        self.object_uuids = {} # uuid: object_instance
+        
+    def load_objects(self):
+        object_instances = object_db.load_objects()
+        for object_instance in object_instances:
+            self.add_object(object_instance)
+            object_instance.load()
+            
+    def save_objects(self):
+        objects = []
+        start_time = time.time()
+        for vnum in self.object_instances:
+            for obj in self.object_instances[vnum]:
+                if obj.state == 0: 
+                    # don't save objects that are in OBJ_STATE_NORMAL
+                    continue
+                
+                # if an object's descriptions are the same as the template, set them to None
+                if obj.name == obj.template.short_description:
+                    obj.name = None
+                if obj.description == obj.template.long_description:
+                    obj.description = None
+                if obj.action_description == obj.template.action_description:
+                    obj.action_description = None
+                objects.append(obj)
+        object_db.save_objects(objects)
+        log_info(f"Saved {len(objects)} objects in {time.time() - start_time:.2f} seconds")
 
-    def add_object_instance(self, object_instance):
+    def add_object(self, object_instance):
+        # add to vnum dict
         if object_instance.vnum not in self.object_instances:
             self.object_instances[object_instance.vnum] = []
         self.object_instances[object_instance.vnum].append(object_instance)
-
-    def remove_object_instance(self, object_instance):
+        # add to uuid dict
+        self.object_uuids[object_instance.uuid] = object_instance
+        
+    def remove_object(self, object_instance):
+        #remove from vnum dict
         if object_instance.vnum in self.object_instances:
             self.object_instances[object_instance.vnum].remove(object_instance)
             if not self.object_instances[object_instance.vnum]:
                 del self.object_instances[object_instance.vnum]
+        # remove from uuid dict
+        if object_instance.uuid in self.object_uuids:
+            del self.object_uuids[object_instance.uuid]
+    
+    def get_object_by_uuid(self, uuid):
+        return self.object_uuids.get(uuid)
 
     def get_all_instances_by_vnum(self, vnum):
         return self.object_instances.get(vnum, [])
@@ -797,21 +987,106 @@ class ObjectInstance:
     def __init__(self, template):
         self.template = template
         self.vnum = template.vnum
-        self.current_room = None
-
-    def set_room(self, room):
-        self.current_room = room
-
-    def move_to_room(self, new_room):
-        if self.current_room is not None:
-            self.current_room.remove_object(self)
-        new_room.add_object(self)
-        self.current_room = new_room
+        self.uuid = uuid.uuid1()
+        self.name = self.template.short_description
+        self.description = self.template.long_description
+        self.action_description = self.template.action_description
         
+        self.state = mud_consts.OBJ_STATE_NORMAL
+        self.insured = None # set to Player name if insured
+        
+        self.location = None
+        self.location_type = None
+        self.location_instance = None
+        
+        self.max_hitpoints = template.max_hitpoints
+        self.current_hitpoints = self.max_hitpoints
+        
+        self.enchantments = {}
+    
+    def save(self):
+        object_db.save_object(self)
+       
+    def load(self):
+        if self.location_type == "room":
+            room = room_manager.get_room_by_vnum(self.location)
+            if room is not None:
+                self.location_instance = room
+            else:
+                log_error(f"Object load: couldn't load {self.name} ({self.vnum}) to room {self.location}")
+        # we're probably not going to use these
+        # elif self.location_type == "mob":
+        #     self.location_instance = mob_instance_manager.get_instance_by_vnum(self.location, 0)
+        # elif self.location_type == "object":
+        #     self.location_instance = object_instance_manager.get_instance_by_vnum(self.location, 0)
+        
+        # todo locker code
+        # for players, will be loaded via update location when they log in        
+        
+    def update_location(self, location_type, location, location_instance):
+        self.location = location
+        self.location_type = location_type
+        self.location_instance = location_instance
+        
+    def update_state(self, state):
+        if 0 <= state < mud_consts.OBJ_STATE_MAX:
+            self.state = state
+        else:
+            log_error(f"Invalid state {state} (object {self.vnum} {self.name})")
+    
     def get_description(self):
         description = []
-        description.append(self.template.long_description)
+        description.append(self.description)
         return "\n".join(description)  
+    
+    def get_action_description(self):
+        description = []
+        description.append(self.action_description)
+        return "\n".join(description)
+    
+    def pickup(self, player):
+        if self not in player.current_room.object_list:
+            log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is not in room {player.current_room.vnum}")
+            return False
+        
+        if self.state == mud_consts.OBJ_STATE_NORMAL:
+            self.update_state(mud_consts.OBJ_STATE_INVENTORY)
+        elif self.state != mud_consts.OBJ_STATE_SPECIAL or self.state != mud_consts.OBJ_STATE_QUEST:    
+            log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
+            return False
+        
+        player.current_room.remove_object(self)
+        player.add_inventory(self.uuid)
+        self.update_location("player", player.name, player)
+        self.save()
+        return True
+    
+    def drop(self, player):
+        # todo code to check for no drop flag
+        
+        if self.uuid not in player.inventory:
+            log_error(f"Object drop: object {self.vnum}, {self.name} not in {player.name} inventory")
+            return False
+        
+        if self.state == mud_consts.OBJ_STATE_INVENTORY:
+            self.update_state(mud_consts.OBJ_STATE_DROPPED)
+        elif self.state != mud_consts.OBJ_STATE_SPECIAL or self.state != mud_consts.OBJ_STATE_QUEST:    
+            log_error(f"Object drop: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
+            return False
+
+        player.current_room.add_object(self)
+        player.remove_inventory(self.uuid)
+        self.update_locate("room", player.current_room.vnum, player.current_room)
+        self.save()
+        return True
+        
+       
+    
+    # for debugging
+    def __str__(self):
+        msg = f"{self.vnum} {self.name} {self.uuid}"
+        msg += f" Location: {self.location_type} {self.location} {self.location_instance}"
+        return msg
 
 class CombatManager:
     def __init__(self):
