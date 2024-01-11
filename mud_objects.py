@@ -172,6 +172,17 @@ class ObjectDatabase:
             # print(obj)
             objects.append(obj)
         return objects
+    
+    def delete_object(self, uuid):
+        if self.conn is None:
+            log_error("Object DB Error: Database connection is not open")
+            return
+
+        self.cursor.execute("""
+            DELETE FROM objects WHERE uuid = ?
+        """, (str(uuid),))
+
+        self.conn.commit()
 
 player_db = PlayerDatabase('player_database.db')
 object_db = ObjectDatabase('object_database.db')
@@ -954,7 +965,16 @@ class ObjectInstanceManager:
                     obj.description = None
                 if obj.action_description == obj.template.action_description:
                     obj.action_description = None
+                
                 objects.append(obj)
+                
+                if obj.name is None:
+                    obj.name = obj.template.short_description
+                if obj.description is None:
+                    obj.description = obj.template.long_description
+                if obj.action_description is None:
+                    obj.action_description = obj.template.action_description
+ 
         object_db.save_objects(objects)
         log_info(f"Saved {len(objects)} objects in {time.time() - start_time:.2f} seconds")
 
@@ -1029,7 +1049,22 @@ class ObjectInstance:
         
         # todo locker code
         # for players, will be loaded via update location when they log in        
+    
+    def imp(self):
+        if self.insured is not None:
+            log_error(f"Object imp: object {self.vnum} {self.name} is insured")
+            return
         
+        if self.location_type == "room":
+            self.location_instance.remove_object(self)
+        else:
+            log_error(f"Object imp: object {self.vnum} {self.name} is not in a room")
+            return
+        
+        object_db.delete_object(self.uuid)
+        object_instance_manager.remove_object(self)      
+        
+    
     def update_location(self, location_type, location, location_instance):
         self.location = location
         self.location_type = location_type
@@ -1060,11 +1095,13 @@ class ObjectInstance:
             log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
             return False
         
+        print(self.name)
         player.current_room.remove_object(self)
         player.add_inventory(self.uuid)
         self.update_state(mud_consts.OBJ_STATE_INVENTORY)
         self.update_location("player", player.name, player)
         self.save()
+        print(self.name)
         return True
     
     def drop(self, player):
@@ -1090,7 +1127,7 @@ class ObjectInstance:
     
     # for debugging
     def __str__(self):
-        msg = f"{self.vnum} {self.name} {self.uuid}"
+        msg = f"{self.vnum} {self.name} {self.state}"
         msg += f" Location: {self.location_type} {self.location} {self.location_instance}"
         return msg
 

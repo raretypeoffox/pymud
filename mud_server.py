@@ -12,7 +12,7 @@ from mud_handler import handle_player
 from mud_world import build_world, reset_world, build_objects
 from mud_shared import log_info, log_error
 from mud_combat import combat_loop
-from mud_ticks import tick_loop, mini_tick_loop
+from mud_ticks import tick_loop, mini_tick_loop, long_tick_loop
 
 def log_client_input(player, msg):
     print(f"{player.fd}: Received: {msg.rstrip()}")              
@@ -76,6 +76,7 @@ def update_game_state():
     combat_loop()
     tick_loop()
     mini_tick_loop()
+    long_tick_loop()
 
 def shutdown_handler(signum, frame):
     handle_shutdown(signum, frame) 

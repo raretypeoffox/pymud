@@ -4,8 +4,9 @@ import random
 
 from mud_comms import  player_manager, send_room_message
 from mud_objects import mob_instance_manager, room_manager, object_instance_manager
-from mud_shared import colourize
+from mud_shared import colourize, first_to_upper, log_error
 from mud_handler import player_movement
+import mud_consts
 
 class TimeManager:
     def __init__(self):
@@ -21,6 +22,8 @@ class TimeManager:
         self.last_long_tick = time.time()
         self.long_tick_length = (60 * 15) # fixed 15 minutes
         self.long_ticks_elapsed = 0
+        
+        self.imp_list = set() # list of objects to imp
 
     # tick length (in ms) is 30s +/- 2s (1 std dev)
     def update_tick_length(self):
@@ -86,7 +89,28 @@ def long_tick_loop():
     if not time_manager.next_long_tick():
         return
     
-    object_instance_manager.save_all_objects()          
+    object_instance_manager.save_objects()          
+    do_imp()
+    
+def do_imp():
+    # first imp all the items that were added in the previous long_tick
+    if len(time_manager.imp_list) > 0:
+        for obj in time_manager.imp_list:
+            if obj is not None and obj.state == mud_consts.OBJ_STATE_DROPPED and obj.insured == None:
+                print(obj)
+                if obj.location_instance is None:
+                    log_error(f"Object {obj.name} has no location room instance but is ready to be imped")
+                    continue
+                send_room_message(obj.location_instance, f"{first_to_upper(obj.name)} disappears in a puff of smoke!\n")
+                obj.imp()
+                del obj
+        time_manager.imp_list.clear()
+    
+    # then add all the items that will be imp'd in the next long_tick
+    for obj in object_instance_manager.get_all_instances():
+        if obj.state == mud_consts.OBJ_STATE_DROPPED and obj.insured == None:
+            time_manager.imp_list.add(obj)
+    
     
 def do_specials():
     if time_manager.ticks_elapsed % 5 > 0:
