@@ -53,6 +53,7 @@ def parse_mob(lines):
     mob_vnum = int(lines[0][1:])
     offset = 1
     mob_keywords, offset_add = parse_multi_line(lines[offset:])
+    mob_keywords = mob_keywords.lower()
     offset += offset_add
     mob_short_desc, offset_add = parse_multi_line(lines[offset:])
     offset += offset_add
@@ -94,6 +95,7 @@ def parse_object(lines):
     current_object = ObjectTemplate(obj_vnum)
     offset = 1
     current_object.keywords, offset_add = parse_multi_line(lines[offset:])
+    current_object.keywords = current_object.keywords.lower()
     offset += offset_add
     current_object.short_description, offset_add = parse_multi_line(lines[offset:])
     offset += offset_add

@@ -14,6 +14,7 @@ from mud_shared import log_info, log_error, colourize, first_to_upper
 player_manager = PlayerManager()
 
 def send_room_message_processing(player, target, msg):
+    
     if player.current_room is None:
         log_error(f"{player.name} has no room instance")
         return
@@ -40,10 +41,11 @@ def send_room_message_processing(player, target, msg):
     
 
 def send_room_message(room_vnum, msg, excluded_player=None, excluded_msg=None):
-    if isinstance(excluded_player, Player):
+    if not isinstance(excluded_player, list):
         excluded_player = [excluded_player]
     if isinstance(excluded_msg, str):
         excluded_msg = [excluded_msg]
+    
     room = room_manager.get_room_by_vnum(room_vnum)
     for player in room.get_players():
         if not player.character.is_awake() or player.character.NPC:
@@ -62,6 +64,8 @@ def send_global_message(msg):
             send_message(player, msg)
         
 def send_message(player, msg):
+    if player.character is not None and player.character.NPC is True:
+        return
     try:
         player.socket.sendall(msg.encode('utf-8'))
     except (BrokenPipeError, OSError):

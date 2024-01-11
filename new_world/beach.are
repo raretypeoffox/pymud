@@ -107,6 +107,15 @@ and it has keen ears that twitch at the slightest sound.
 
 #OBJECTS
 
+#3001
+scroll magic missile~
+a scroll of magic missile~
+On the ground lies a scroll, its edges glowing with a faint, pulsating light.~
+~
+2 0 0
+0 0 0 0
+1 10 10
+
 #0
 
 
@@ -237,7 +246,7 @@ tunnel, while the sounds of the ocean gradually fade, replaced by the rustling
 of leaves and occasional bird calls. The trail leads you north, away from the 
 cliff's edge.
 ~
-3000 0 0
+3006 0 0
 D0
 ~
 ~
@@ -254,7 +263,7 @@ from the cave's ceiling, creating a serene, if mysterious atmosphere. The walls
 are cool and slightly damp to the touch, and the cave narrows as it curves westward, 
 hinting at secrets hidden deeper within the earth.
 ~
-3000 0 0
+3006 0 0
 D2
 ~
 ~
@@ -271,7 +280,7 @@ and filled with the scent of pine and earth. Sunlight filters through the dense 
 above, casting dappled shadows on the forest floor. The vegetation is dense, but a path 
 to the west is clear, inviting further exploration into the heart of this green haven.
 ~
-3000 0 0
+3006 0 0
 D1
 ~
 ~
@@ -295,10 +304,13 @@ M 0 3004 2 3006           (starfish)
 M 0 3001 2 3002           (seagull)
 M 0 3001 2 3005           (seagull)
 M 0 3003 2 3004           (turtle)
+M 0 3003 2 3004           (turtle)
 M 0 3003 2 3006           (turtle)
 M 0 3005 2 3007           (spider)
 M 0 3005 2 3008           (spider)
 M 0 3006 1 3008           (bat)
+
+O 0 3001 1 3008           (scroll of magic missile)
 S
 
 

@@ -206,3 +206,10 @@ EQ_SLOTS = {
 #define ITEM_CORPSE_PC		     24
 #define ITEM_FOUNTAIN		     25
 #define ITEM_PILL		     26
+
+ACT_SENTINEL = 2		  # Stays in one room
+ACT_SCAVENGER = 4		  # Picks up objects
+ACT_UNUSED1 = 8		    # no longer used
+ACT_UNUSED2 = 16		  # no longer used
+ACT_AGGRESSIVE = 32		# Attacks PC's
+ACT_WIMPY = 128		  # Flees when hurt

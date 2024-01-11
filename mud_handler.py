@@ -5,7 +5,7 @@ from datetime import datetime
 
 import mud_consts
 from mud_comms import send_message, send_room_message, player_manager, handle_disconnection
-from mud_shared import colourize, match_keyword
+from mud_shared import colourize, match_keyword, is_NPC, report_mob_health
 
 from mud_world import room_manager
 from mud_objects import player_db, combat_manager
@@ -73,7 +73,8 @@ def say_command(player, argument):
         return
     
     if player.character.is_awake() == False:
-        send_room_message(player.room_id, colourize(f"{player.name} mumbles something in their sleep.\n", "yellow"), excluded_player=player, excluded_msg=colourize("You mumble something in your sleep.\n", "yellow"))
+        send_message(player, colourize("You mumble something in your sleep.\n", "green"))
+        send_room_message(player.room_id, colourize(f"{player.name} mumbles something in their sleep.\n", "green"))
         return
     
     msg = colourize(f"{player.name} says '{argument}'\n", "yellow")
@@ -123,6 +124,10 @@ def title_command(player, argument):
     if argument.split()[0].lower() == 'reset':
         player.title = "the" + player.character.origin
         send_message(player, "Your title has been reset.\n")
+        return
+    
+    if len(argument) > 50:
+        send_message(player, "Your title cannot be longer than 50 characters.\n")
         return
 
     player.set_title(argument)
@@ -211,44 +216,75 @@ def recall_command(player, argument):
         send_message(player, "Available commands are 'recall', 'recall set', 'recall show' and 'recall clear'\n")
 
 def look_command(player, argument):
+    if is_NPC(player):
+        return
+    
     if player.character.is_awake() == False:
         send_message(player, "You see 42 sheep dancing in your dreams.\n")
         return
     
+    room = player.current_room
+    
     if argument == '':
-        room_instance = room_manager.get_room_by_vnum(player.room_id)
-        
-        if room_instance is not None:
-            exit_names = "[Exits: " + room_instance.get_exit_names() + "]"
-            send_message(player, f"{colourize(room_instance.name,"yellow")}\n{exit_names}\n{room_instance.description}")
-            player_names = room_instance.get_player_names(excluding_player=player)
+    
+        if room is not None:
+            exit_names = "[Exits: " + room.get_exit_names() + "]"
+            send_message(player, f"{colourize(room.name,"yellow")}\n{exit_names}\n{room.description}")
+            
+            player_names = room.get_player_names(excluding_player=player)
             if player_names != '':
                 send_message(player, f"{player_names}")
-            mob_names = room_instance.get_mob_names()
+                
+            mob_names = room.get_mob_names()
             if mob_names != '':
                 send_message(player, f"{mob_names}")
     else:
-        room_instance = room_manager.get_room_by_vnum(player.room_id)
-        if room_instance is not None:
-            userinput = argument.split()[0]
-            keywords = room_instance.get_door_keywords()
-            match = match_keyword(keywords, userinput)
-            if match:
-                msg = room_instance.get_door_description_by_keyword(match)
-                send_message(player, f"{msg}\n")
-                return
-            keywords = room_instance.get_extended__description_keywords()
-            match = match_keyword(keywords, userinput)
-            if match:
-                msg = room_instance.get_extended_description_by_keyword(match)
-                send_message(player, f"{msg}\n")
-                return
-            keywords = room_instance.get_mob_keywords()
-            match = match_keyword(keywords, userinput)
-            if match:
-                msg = room_instance.get_mob_description_by_keyword(match)
-                send_message(player, f"{msg}\n")
-                return
+        
+        
+        mob = room.search_mobs(argument)
+        
+        if mob is not None:
+            send_message(player, f"{mob.get_description()}\n")
+            report_mob_health(mob)
+            return
+        
+        object = room.search_objects(argument)
+        
+        if object is not None:
+            send_message(player, f"{object.get_description()}\n")
+            return
+        
+        players_in_room = room.search_players(argument)
+        
+        if players_in_room is not None:
+            send_message(player, f"{players_in_room.get_description()}\n")
+            return
+        
+        
+        send_message(player, colourize("You don't see that here.\n", "green"))
+        
+        
+        # room_instance = room_manager.get_room_by_vnum(player.room_id)
+        # if room_instance is not None:
+        #     userinput = argument.split()[0]
+        #     keywords = room_instance.get_door_keywords()
+        #     match = match_keyword(keywords, userinput)
+        #     if match:
+        #         msg = room_instance.get_door_description_by_keyword(match)
+        #         send_message(player, f"{msg}\n")
+        #         return
+        #     keywords = room_instance.get_extended__description_keywords()
+        #     match = match_keyword(keywords, userinput)
+        #     if match:
+        #         msg = room_instance.get_extended_description_by_keyword(match)
+        #         send_message(player, f"{msg}\n")
+        #         return
+        #     keywords = room_instance.get_mob_keywords()
+        #     match = match_keyword(keywords, userinput)
+        #     if match:
+        #         msg = room_instance.get_mob_description_by_keyword(match)
+        #         send_message(player, f"{msg}\n")
+        #         return
             # todo add objects
             
             
@@ -270,11 +306,13 @@ def player_movement(player, direction):
         send_message(player, "You are fighting someone!\n")
         return
     
-    room_instance = room_manager.get_room_by_vnum(player.room_id)
+    # todo: add private room check if functionality desired
+    
+    room_instance = player.current_room
     if room_instance is not None:
         if direction in room_instance.doors:
             if room_instance.doors[direction]["locks"] == 0:
-                move_player(player, player.room_id, room_instance.doors[direction]["to_room"], msg_to_room=colourize(f"{player.name} leaves to the {mud_consts.DIRECTIONS[direction]}.\n", "green"))
+                move_player(player, room_instance.room_vnum, room_instance.doors[direction]["to_room"], msg_to_room=colourize(f"{player.name} leaves to the {mud_consts.DIRECTIONS[direction]}.\n", "green"))
                 send_room_message(room_instance.doors[direction]["to_room"], colourize(f"{player.name} arrives from the {mud_consts.DIRECTIONS_REVERSE[direction]}.\n", "green"), excluded_player=player)
             else:
                 send_message(player, "The door is locked.\n")
@@ -321,6 +359,18 @@ def cmds_command(player, argument):
     for cmds in commands:
         send_message(player, f"{cmds}\n")
 
+def test_command(player, argument):
+    send_message(player, "Test command.\n")
+    if argument == '':
+        return
+    mob = player.current_room.search_mobs(argument)
+    if mob is None:
+        send_message(player, "No mob with that name found.\n")
+    else:
+        send_message(player, f"Mob found: {mob.name}\n")
+                 
+
+
 commands = {
     'kill': [kill_command],
     'stand': [stand_command],
@@ -346,6 +396,7 @@ commands = {
     'down': [down_command],
     'goto': [goto_command],
     'cmds' : [cmds_command],
+    'test' : [test_command],
     # Add more commands here...
 }
 

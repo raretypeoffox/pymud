@@ -5,8 +5,9 @@ import threading
 import pickle
 from datetime import datetime
 import time
+import random
 
-from mud_shared import dice_roll, colourize, log_info, log_error
+from mud_shared import dice_roll, colourize, log_info, log_error, check_flag
 import mud_consts
 
 # May want to consider if JSON is a better format for storing data
@@ -164,6 +165,9 @@ class Player:
         if new_room is not None:
             new_room.add_player(self)
             self.current_room = new_room
+            
+    def get_description(self):
+        return self.name + " " + self.get_title()
     
     def get_title(self):
         if self.title == "":
@@ -328,10 +332,6 @@ class Character:
             self.regen_hp(REGEN_HP_RATE/10)
             self.regen_mana(REGEN_MANA_RATE/10)
             self.regen_stamina(REGEN_STAMINA_RATE/4)
-            
-            
-        
-
 
     # for debugging
     def __str__(self):
@@ -470,6 +470,16 @@ class MobTemplate:
         self.gold = gold
         self.xp = xp
         self.sex = sex
+        self.speed = 3
+        
+    def check_if_move(self):
+        if check_flag(self.act_flags, mud_consts.ACT_SENTINEL):
+            return False # Sentinel mobs don't move
+        
+        if random.uniform(0, 1) < (0.01 * self.speed):
+            return True
+
+        return False
         
 class ObjectTemplate:
     def __init__(self, vnum):
@@ -504,16 +514,10 @@ class Room:
         
         self.doors = {}
         self.extended_descriptions = []
-        
-        self.mobs = []
-        self.players = []
-        self.objects = []
     
         self.mob_list = set()
         self.object_list = set()
         self.player_list = set()
-        
-    
 
     def add_door(self, door_number, door_description, keywords, locks, key, to_room):
         self.doors[door_number] = {
@@ -556,22 +560,44 @@ class Room:
         available_exits_str = ', '.join(available_exits)
         return available_exits_str
     
+    def choose_random_door(self, exclude_other_area=True):
+        available_doors = []
+        for door in self.doors:
+            if exclude_other_area and room_manager.get_room_by_vnum(self.doors[door]["to_room"]).area_number != self.area_number:
+                continue
+            if self.doors[door]["locks"] == 0:
+                available_doors.append(door)
+        if available_doors:
+            return random.choice(available_doors)
+        else:
+            return None
+    
     def get_players(self):
         return self.player_list
     
     def get_player_names(self, excluding_player=None):
-        player_names = [(player.name, player.get_title()) for player in self.player_list if player != excluding_player]
+        player_names = []
+        for player in self.player_list:
+            if player != excluding_player:
+                position_str = "."
+                if player.character.position == "Sleep":
+                    position_str = " is sleeping here."
+                elif player.character.position == "Rest":
+                    position_str = " is resting here."
+                player_names.append((player.name, player.get_title() + position_str))
         if not player_names:  # Check if the list is empty
             return ""
         else:
-            return '\n'.join(f'\t{name} {title}' for name, title in player_names) + '\n'
+            ret_str = '\n'.join(f'{name} {title}' for name, title in player_names) + '\n'
+            return colourize(ret_str, "cyan")
     
     def get_mob_names(self):
         mob_names = [mob.template.long_desc for mob in self.mob_list]
         if not mob_names:  # Check if the list is empty
             return ""
         else:
-            return ''.join('\t' + name for name in mob_names)
+            ret_str = ''.join(name for name in mob_names)
+            return colourize(ret_str, "cyan")
     
     def get_mob_keywords(self):
         mob_keywords = []
@@ -593,6 +619,45 @@ class Room:
     
     def get_mob_instances(self):
         return self.mob_list
+    
+    def process_keyword(self, keyword):
+        keyword = keyword.lower()
+        # Split the keyword into number and actual keyword if applicable
+        number, keyword = (keyword.split('.', 1) + [None])[:2] if '.' in keyword else (None, keyword)
+        number = int(number) - 1 if number is not None and number.isdigit() else None
+        return keyword, number
+    
+    def process_search_output(self, number, matches):
+        if number is None and matches:
+            return matches[0]
+        elif number is not None and number < len(matches):
+            return matches[number]
+        else:
+            return None
+    
+    def search_mobs(self, keyword):
+        keyword, number = self.process_keyword(keyword)
+        matches = [mob for mob in self.mob_list if any(kw.startswith(keyword) for kw in mob.template.keywords.split())]
+        return self.process_search_output(number, matches)
+    
+    def search_players(self, keyword):
+        print(f"Searching for players with keyword: {keyword}")
+        keyword, number = self.process_keyword(keyword)
+        matches = [player for player in self.player_list if player.name.lower().startswith(keyword)]
+        print(f"Found matches: {matches}")
+        return self.process_search_output(number, matches)
+    
+    def search_objects(self, keyword):
+        keyword, number = self.process_keyword(keyword)
+        matches = [obj for obj in self.object_list if any(kw.startswith(keyword) for kw in obj.template.keywords.split())]
+        return self.process_search_output(number, matches)
+
+    def search_exits(self, keyword):
+        keyword, number = self.process_keyword(keyword)
+        matches = [door for door in self.doors if any(kw.startswith(keyword) for kw in self.doors[door]["keywords"].split())]
+        return self.process_search_output(number, matches)
+        
+        
     
     def get_door_keywords(self):
         door_keywords = []
@@ -646,7 +711,7 @@ class Resets:
 
 class MobInstanceManager:
     def __init__(self):
-        self.mob_instances = {}
+        self.mob_instances = {} # vnum: [mob_instance1, mob_instance2, ...]
     
     def add_mob_instance(self, mob_instance):
         if mob_instance.template.vnum not in self.mob_instances:
@@ -659,11 +724,14 @@ class MobInstanceManager:
             if not self.mob_instances[mob_instance.template.vnum]:
                 del self.mob_instances[mob_instance.template.vnum]
 
-    def get_all_instances(self, vnum):
+    def get_all_instances_by_vnum(self, vnum):
         return self.mob_instances.get(vnum, [])
 
-    def get_instance(self, vnum, index):
+    def get_instance_by_vnum(self, vnum, index):
         return self.mob_instances.get(vnum, [None])[index]
+    
+    def get_all_instances(self):
+        return [mob for mob_list in self.mob_instances.values() for mob in mob_list]
 
 class MobInstance:
     def __init__(self, template):
@@ -723,7 +791,7 @@ class MobInstance:
         
 class ObjectInstanceManager:
     def __init__(self):
-        self.object_instances = {}
+        self.object_instances = {} # vnum: [object_instance1, object_instance2, ...]
 
     def add_object_instance(self, object_instance):
         if object_instance.vnum not in self.object_instances:
@@ -736,11 +804,14 @@ class ObjectInstanceManager:
             if not self.object_instances[object_instance.vnum]:
                 del self.object_instances[object_instance.vnum]
 
-    def get_all_instances(self, vnum):
+    def get_all_instances_by_vnum(self, vnum):
         return self.object_instances.get(vnum, [])
 
-    def get_instance(self, vnum, index):
+    def get_instance_by_vnum(self, vnum, index):
         return self.object_instances.get(vnum, [None])[index]
+    
+    def get_all_instances(self):
+        return [obj for obj_list in self.object_instances.values() for obj in obj_list]
 
 # need to set up methods for room and mobs
 class ObjectInstance:
@@ -756,7 +827,12 @@ class ObjectInstance:
         if self.current_room is not None:
             self.current_room.remove_object(self)
         new_room.add_object(self)
-        self.current_room = new_room  
+        self.current_room = new_room
+        
+    def get_description(self):
+        description = []
+        description.append(self.template.long_description)
+        return "\n".join(description)  
 
 class CombatManager:
     def __init__(self):

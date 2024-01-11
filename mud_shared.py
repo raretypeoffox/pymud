@@ -84,6 +84,14 @@ def random_percent():
 
 def first_to_upper(s):
     return s[0].upper() + s[1:]
+
+def check_flag(act_flags, flag):
+    ''' Checks if a flag is set in a bitfield.'''
+    if not isinstance(act_flags, int) or not isinstance(flag, int):
+        raise ValueError("Both act_flags and flag must be integers.")
+    if flag != 0 and ((flag & (flag - 1)) != 0):
+        raise ValueError("Flag must be a power of 2.")
+    return bool(act_flags & flag)
     
 def match_keyword(keywords, user_input):
     ''' Attempts to match user input against a list of keywords.
@@ -100,4 +108,27 @@ def match_keyword(keywords, user_input):
                 return keyword
     return None
 
+def is_NPC(player):
+    if player.character is None:
+        return False
+    elif player.character.NPC is True:
+        return True
+    else:
+        return False
    
+def report_mob_health(NPC):
+    hp_pct = NPC.character.get_hp_pct()
+    if hp_pct == 1:
+        msg =  f"{NPC.name} is in full health!\n"
+    elif hp_pct > .80:
+        msg = f"{NPC.name} has some small wounds and bruises.\n"
+    elif hp_pct > .50:
+        msg = f"{NPC.name} has some big and nasty wounds.\n"
+    elif hp_pct > .20:
+        msg = f"{NPC.name} is bleeding profusely.\n"
+    elif hp_pct > 0:
+        msg = f"{NPC.name} is on the verge of death.\n"
+    else:
+        log_error("report_mob_health() called with dead NPC!")
+    msg = colourize(first_to_upper(msg), "yellow")
+    return msg

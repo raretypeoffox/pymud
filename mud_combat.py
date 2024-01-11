@@ -1,6 +1,6 @@
 import time
 
-from mud_shared import log_info, log_error, dice_roll, random_percent, colourize, first_to_upper
+from mud_shared import log_info, log_error, dice_roll, random_percent, colourize, first_to_upper, report_mob_health
 
 from mud_world import mob_instance_manager
 from mud_comms import send_room_message_processing, send_message
@@ -153,30 +153,12 @@ def combat_round(combatant_one, combatant_two, type=0):
     #     return
     
 
-def report_mob_health(PC, NPC):
-    hp_pct = NPC.character.get_hp_pct()
-    if hp_pct == 1:
-        msg =  f"{NPC.name} is in full health!\n"
-    elif hp_pct > .80:
-        msg = f"{NPC.name} has some small wounds and bruises.\n"
-    elif hp_pct > .50:
-        msg = f"{NPC.name} has some big and nasty wounds.\n"
-    elif hp_pct > .20:
-        msg = f"{NPC.name} is bleeding profusely.\n"
-    elif hp_pct > 0:
-        msg = f"{NPC.name} is on the verge of death.\n"
-    else:
-        log_error("Combat round called with dead NPC!")
-    msg = first_to_upper(msg)
-    send_message(PC, colourize(msg, "yellow"))
-
-
 def test_kill_mob(player, mob):
     send_message(player, f"You attack {mob.name}!\n")
     combat_manager.start_combat(player, mob)
     combat_manager.start_combat(mob, player)
     combat_round(player, mob)
-    report_mob_health(player, combat_manager.get_current_target(player))
+    send_message(player, report_mob_health(combat_manager.get_current_target(player)))
 
 
 def combat_loop():
@@ -195,6 +177,6 @@ def combat_loop():
         if combatant is None or combat_manager.get_current_target(combatant) is None:
             continue
         if combatant.character.NPC is False:
-            report_mob_health(combatant, combat_manager.get_current_target(combatant))
+            send_message(combatant, report_mob_health(combat_manager.get_current_target(combatant)))
             send_message(combatant, combatant.get_prompt() + "\n")
 
