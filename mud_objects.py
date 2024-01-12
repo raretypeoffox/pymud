@@ -120,6 +120,7 @@ class ObjectDatabase:
             json.dumps(obj.enchantments)
         ))
         self.conn.commit()
+        log_info(f"Saved object {obj.name} {obj.uuid} to database")
         
     def save_objects(self, objects):
         if self.conn is None:
@@ -135,6 +136,7 @@ class ObjectDatabase:
         self.conn.commit()
 
     def load_objects(self):
+        print("Object DB Loading...")
         if self.conn is None:
             log_error("Object DB Error: Database connection is not open")
             return []
@@ -142,14 +144,14 @@ class ObjectDatabase:
         rows = self.cursor.fetchall()
         objects = []
         for row in rows:
-            obj = ObjectInstance(object_manager.get_object(row[1]))
-            if obj is None:
-                log_error(f"Object DB Error: no object template found with vnum {row[0]}")
-                continue
             try:
-                obj.uuid = uuid.UUID(row[0])
+                obj_uuid = uuid.UUID(row[0])
             except ValueError:
                 log_error(f"Object DB Error: Invalid UUID: {row[0]}")
+                continue
+            obj = ObjectInstance(object_manager.get_object(row[1]), instance_uuid=obj_uuid)
+            if obj is None:
+                log_error(f"Object DB Error: no object template found with vnum {row[0]}")
                 continue
             obj.vnum = row[1]
             if row[2] is not None:
@@ -169,7 +171,7 @@ class ObjectDatabase:
             except json.JSONDecodeError:
                 log_error(f"Object DB Error: Invalid JSON in enchantments: {row[11]}")
                 continue
-            # print(obj)
+            print(obj)
             objects.append(obj)
         return objects
     
@@ -272,9 +274,9 @@ class Player:
         
         # load inventory_list
         for uuid in self.inventory:
-            print(f"Loading object {uuid}")
+            # print(f"Loading object {uuid}")
             obj = object_instance_manager.get_object_by_uuid(uuid)
-            print(f"Loaded object {obj}")
+            # print(f"Loaded object {obj}")
             if obj is not None:
                 self.inventory_list[uuid] = obj
         
@@ -661,6 +663,11 @@ class MobTemplate:
 
         return False
     
+    
+    def get_max_hitpoints(self):
+        return dice_roll(self.hitdice_num, self.hitdice_size, self.hitdice_bonus)
+        
+        
     def get_max_hitpoints(self):
         return dice_roll(self.hitdice_num, self.hitdice_size, self.hitdice_bonus)
         
@@ -876,11 +883,55 @@ class Resets:
         self.door_resets = []
         self.randomize_doors_resets = []
         
+        self.mob_repop_queue = set()
+        self.obj_repop_queue = set()
+        
     def add_mob_reset(self, ResetMob):
         self.mob_resets.append(ResetMob)
         
     def add_object_reset(self, ResetObject):
         self.object_resets.append(ResetObject)
+        
+    def add_to_mob_repop_queue(self, mob_reset):
+        self.mob_repop_queue.add(mob_reset)
+        
+    def add_to_obj_repop_queue(self, obj_reset):
+        self.obj_repop_queue.add(obj_reset)
+        
+    def process_mob_repop_queue(self):
+        if len(self.mob_repop_queue) == 0:
+            return False
+        while self.mob_repop_queue:
+            mob_reset = self.mob_repop_queue.pop()
+            mob_template = mob_manager.get_mob_template(mob_reset.mob_vnum)
+            room = room_manager.get_room_by_vnum(mob_reset.room_vnum)
+            MobInstance(mob_template, mob_reset, room)
+            
+            # todo
+            # for item in mob_reset.inventory:
+            #     mob.add_item(item)
+            # mob.mob_reset = mob_reset
+            # mob_reset.equipment = Equipment()
+            # for item in mob_reset.equipment:
+            #     mob_reset.equipment.equip(item)
+            # mob_reset.inventory = []
+            # mob_reset.comment = ""
+        return True
+    
+    def process_obj_repop_queue(self):
+        if len(self.mob_repop_queue) == 0 and len(self.obj_repop_queue) == 0:
+            return False
+        while self.obj_repop_queue:
+            obj_reset = self.obj_repop_queue.pop()
+            room = room_manager.get_room_by_vnum(obj_reset.room_vnum)
+            ObjectInstance(object_manager.get_object(obj_reset.obj_vnum), obj_reset=obj_reset, room=room)
+            # todo
+            # code for objects within containers
+        return True
+    
+    def process_repop_queue(self):
+        self.process_mob_repop_queue()
+        self.process_obj_repop_queue()
 
 class MobInstanceManager:
     def __init__(self):
@@ -907,19 +958,30 @@ class MobInstanceManager:
         return [mob for mob_list in self.mob_instances.values() for mob in mob_list]
 
 class MobInstance:
-    def __init__(self, template):
+    def __init__(self, template, mob_reset, room):
         self.template = template
+        self.mob_reset = mob_reset
         self.name = self.template.short_desc
         self.current_room = None
         
-        self.max_hitpoints = dice_roll(template.hitdice_num, template.hitdice_size, template.hitdice_bonus)
-        self.current_hitpoints = self.max_hitpoints
         self.max_mana = 100
         self.current_mana = self.max_mana
         
         self.character = Character(NPC=True)
         
-        # todo move equipment and inventory to character
+        self.character.max_hitpoints = dice_roll(template.hitdice_num, template.hitdice_size, template.hitdice_bonus)
+        self.character.current_hitpoints = self.character.max_hitpoints
+        self.character.ac = template.ac
+        self.character.hitroll = template.hitroll
+        self.character.damdice_num = template.damdice_num
+        self.character.damdice_size = template.damdice_size
+        self.character.amdice_bonus = template.damdice_bonus
+        self.character.level = template.level
+        
+        self.set_room(room)
+        mob_instance_manager.add_mob_instance(self)
+        
+        # todo
         self.equipment = Equipment()
         self.inventory = []
         
@@ -927,6 +989,7 @@ class MobInstance:
 
     def set_room(self, room):
         self.current_room = room
+        room.add_mob(self)
 
     def move_to_room(self, new_room):
         if self.current_room is not None:
@@ -970,7 +1033,7 @@ class ObjectInstanceManager:
     def load_objects(self):
         object_instances = object_db.load_objects()
         for object_instance in object_instances:
-            self.add_object(object_instance)
+            # self.add_object(object_instance)
             object_instance.load()
             
     def save_objects(self):
@@ -1032,24 +1095,11 @@ class ObjectInstanceManager:
     def get_all_instances(self):
         return [obj for obj_list in self.object_instances.values() for obj in obj_list]
     
-    def reset_objects(self):
-        for obj_reset in reset_manager.object_resets:
-            for obj_to_check in self.get_all_instances_by_vnum(obj_reset.obj_vnum):
-                if not (obj_to_check.location_type == "room" and obj_to_check.location == obj_reset.room_vnum):
-                    object = ObjectInstance(object_manager.get_object(obj_reset.obj_vnum))
-                    self.add_object(object)
-                    room = room_manager.get_room_by_vnum(obj_reset.room_vnum)
-                    room.add_object(object)
-                    object.update_location("room", obj_reset.room_vnum, room)
-                    
- 
-
-# need to set up methods for room and mobs
 class ObjectInstance:
-    def __init__(self, template):
+    def __init__(self, template, obj_reset=None, room=None, instance_uuid=None):
         self.template = template
         self.vnum = template.vnum
-        self.uuid = uuid.uuid1()
+        self.uuid = instance_uuid if instance_uuid is not None else uuid.uuid1()
         self.name = self.template.short_description
         self.description = self.template.long_description
         self.action_description = self.template.action_description
@@ -1065,7 +1115,17 @@ class ObjectInstance:
         self.current_hitpoints = self.max_hitpoints
         
         self.enchantments = {}
-    
+        
+        if obj_reset is not None:
+            self.obj_reset = obj_reset
+            
+        if room is not None:
+            self.update_location("room", room.vnum, room)
+            room.add_object(self)
+        
+        object_instance_manager.add_object(self)
+                 
+                    
     def save(self):
         object_db.save_object(self)
        
@@ -1131,13 +1191,15 @@ class ObjectInstance:
             log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
             return False
         
-        print(self.name)
+        if self.state == mud_consts.OBJ_STATE_NORMAL:
+            # normal items need to reset on repop
+            reset_manager.add_to_obj_repop_queue(self.obj_reset)
+        
         player.current_room.remove_object(self)
         player.add_inventory(self.uuid)
         self.update_state(mud_consts.OBJ_STATE_INVENTORY)
         self.update_location("player", player.name, player)
         self.save()
-        print(self.name)
         return True
     
     def drop(self, player):

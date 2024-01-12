@@ -2,6 +2,7 @@
 
 import random
 from datetime import datetime
+import mud_consts
 
 # Define some ANSI escape codes for colors
 RED = "\033[31m"
@@ -20,7 +21,7 @@ BRIGHT_CYAN = "\033[1;36m"
 BRIGHT_WHITE = "\033[1;37m"
 RESET = "\033[0m"
 
-LOG = "log.txt"
+
 
 # in the future, log this to a file
 def log_error(msg):
@@ -34,7 +35,7 @@ def log_info(msg):
 def log_msg(msg):
     msg = datetime.now().strftime("%Y-%m-%d %H:%M:%S") + " " + msg
     # open the log file in append mode
-    with open(LOG, "a") as f:
+    with open(mud_consts.SERVER_LOG, "a") as f:
         f.write(msg + "\n")
 
     
@@ -72,7 +73,7 @@ def colourize(text, flag):
     else:
         return text
     
-    
+  
 def dice_roll(num, size, bonus):
     total = 0
     for i in range(num):

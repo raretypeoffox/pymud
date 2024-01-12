@@ -1,5 +1,6 @@
 # mud_consts.py
 
+SERVER_LOG = "server_log.txt"
 
 Greeting = """
                         /\\

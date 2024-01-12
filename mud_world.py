@@ -141,7 +141,7 @@ def parse_room(lines):
     vnum = int(lines[0][1:])
     current_room = Room(vnum)
     current_room.name = lines[1][:-1]
-    print(current_room.name)
+    # print(current_room.name)
     current_room.description, offset = parse_multi_line(lines[2:])
     offset+=2
     
@@ -174,7 +174,7 @@ def parse_room(lines):
 def parse_reset(line):
     line_index = 0
     mob_reset = None
-    object_reset = None
+    obj_reset = None
     while line_index < len(line):
         if line[line_index].startswith('S'):
             # shouldn't be reached but just to be safe
@@ -336,18 +336,8 @@ def reset_world():
             if room is not None:
                 # todo later: review max_count
                 # for i in range(mob_reset.max_count):
-                mob = MobInstance(mob_template)
-                mob_instance_manager.add_mob_instance(mob)
-                mob.character.ac = mob_template.ac
-                mob.character.hitroll = mob_template.hitroll
-                mob.character.max_hitpoints = mob_template.get_max_hitpoints()
-                mob.character.current_hitpoints = mob.character.max_hitpoints
-                mob.character.damdice_num = mob_template.damdice_num
-                mob.character.damdice_size = mob_template.damdice_size
-                mob.character.amdice_bonus = mob_template.damdice_bonus
-                mob.character.level = mob_template.level
-                mob.set_room(room)
-                room.add_mob(mob)
+                mob = MobInstance(mob_template, mob_reset, room)
+                
                 if mob_reset.equipment:
                     for slot, obj_vnum in mob_reset.equipment.slots.items():
                         if obj_vnum != 0:
@@ -380,10 +370,10 @@ def reset_world():
                     if obj.vnum == obj_reset.obj_vnum:
                         add_obj = False
                 if add_obj:
-                    obj = ObjectInstance(obj_template)
-                    object_instance_manager.add_object(obj)
-                    room.add_object(obj)
-                    obj.update_location("room", room.vnum, room)
+                    obj = ObjectInstance(obj_template, obj_reset, room)
+                    # object_instance_manager.add_object(obj)
+                    # room.add_object(obj)
+                    # obj.update_location("room", room.vnum, room)
             else:
                 print(f"Room {obj_reset.room_vnum} not found")
         else:

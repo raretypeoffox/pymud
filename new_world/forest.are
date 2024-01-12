@@ -81,7 +81,7 @@ in the air. The delicate grace with which it moves is a delightful spectacle, ad
 touch of magic to the forest.
 ~
 64 0 0 S
-2 2 18 1d10+0 1d4+0
+2 2 15 1d10+0 1d4+0
 0 0
 0 0 1
 
@@ -193,10 +193,15 @@ D3
 0 0 3102
 S
 #3102
-Whispering Clearing~
-This small clearing is alive with the whispering sounds of the wind through the 
-leaves. Wildflowers dot the area, providing a splash of color against the greens
-and browns of the forest.
+The Murmuring Glade~
+This open glade, nestled within the dense forest, exudes a sense of serene isolation. 
+Sunbeams pierce through the overhead foliage, illuminating patches of the soft, 
+grassy floor. The air is filled with the gentle rustling of leaves and the intermittent 
+chirping of hidden birds. Surrounding trees, their trunks covered in moss and vines, 
+stand like silent sentinels at the edges of the clearing. The glade seems to breathe 
+with the forest, each breeze bringing a soft, almost murmuring sound that enhances 
+its peacefulness. It's a natural haven, offering a brief respite from the shadowed 
+woodland paths.
 ~
 3100 0 3
 D0
@@ -345,7 +350,7 @@ S
 #3109
 Forest Crossroads~
 Several paths converge here, under the watchful eyes of ancient trees. A wooden 
-signpost points in various directions, though the destinations are worn and 
+SIGNPOST points in various directions, though the destinations are worn and 
 difficult to read.
 ~
 3100 0 0 3
@@ -367,7 +372,8 @@ D3
 0 0 3110
 E
 signpost~
-Studying the signpost closer, you note an image of a keep in the north-west direction.
+Studying the signpost closer, you note an image of a keep in the north-west direction
+as well as a warning about a cave towards the north east.
 ~
 S
 #3110

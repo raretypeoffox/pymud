@@ -4,9 +4,7 @@ from mud_shared import log_info, log_error, dice_roll, random_percent, colourize
 
 from mud_world import mob_instance_manager
 from mud_comms import send_room_message_processing, send_message, send_room_message, send_prompt_to_room
-from mud_objects import combat_manager, room_manager
-
-
+from mud_objects import combat_manager, room_manager, reset_manager
 
 def return_PC_and_NPC(character_one, character_two):
     if character_one.character.NPC is True:
@@ -22,6 +20,7 @@ def return_PC_and_NPC(character_one, character_two):
 
 def process_mob_death(player, mob):
     mob.move_to_room(None)
+    reset_manager.add_to_mob_repop_queue(mob.mob_reset)
     # todo add corpse
     
     mob_instance_manager.remove_mob_instance(mob)
@@ -29,7 +28,7 @@ def process_mob_death(player, mob):
 
 def process_victory(player, mob_level):
     level_diff = player.character.level - mob_level
-    print("level diff: ", level_diff)
+
     if level_diff < 5:
         num_dice = (5 - level_diff) * 2
         
@@ -114,7 +113,7 @@ def one_hit(attacker, defender, type=0):
         damage = dice_roll(damroll_dice, dam_roll_size, dam_roll_bonus)
         # print(f"Damage: {damage} / Damroll: {damroll_dice}d{dam_roll_size}+{dam_roll_bonus}")
         if roll == 20:
-            damage += dice_roll(damroll_dice, dam_roll_size, dam_roll_bonus)
+            damage += dice_roll(damroll_dice, dam_roll_size, dam_roll_bonus) // 2
             msg = f"$A score$s a CRITICAL HIT on $D for {damage} damage!{roll_msg}\n"
         else:
             msg = f"$A hit$s $D for {damage} damage!{roll_msg}\n"
