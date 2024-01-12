@@ -42,10 +42,10 @@ def send_room_message_processing(player, target, msg):
     # print(msg_to_player)
     # print(msg_to_target)
     # print(msg_to_room)
-    send_room_message(player.current_room, msg_to_room, [player, target], [msg_to_player, msg_to_target], prompt=False)
+    send_room_message(player.current_room, msg_to_room, [player, target], [msg_to_player, msg_to_target])
     
 
-def send_room_message(room, msg, excluded_player=None, excluded_msg=None, prompt=True):
+def send_room_message(room, msg, excluded_player=None, excluded_msg=None):
     if not isinstance(excluded_player, list):
         excluded_player = [excluded_player]
     if isinstance(excluded_msg, str):
@@ -60,8 +60,6 @@ def send_room_message(room, msg, excluded_player=None, excluded_msg=None, prompt
             continue
         if player not in excluded_player:
             room_msg = msg
-            if prompt:
-                room_msg += "\n" + player.get_prompt()
             send_message(player, room_msg)
         else:
             if excluded_msg is not None:
@@ -69,41 +67,27 @@ def send_room_message(room, msg, excluded_player=None, excluded_msg=None, prompt
                 if index < len(excluded_msg):
                     send_message(player, excluded_msg[index])
                 
-def send_global_message(msg, prompt=None):
-    """
-    Sends a global message to all logged-in players, excluding those in the prompt list.
-
-    Args:
-        msg (str): The message to be sent.
-        prompt (list or Player, optional): A player or list of players who should not receive the message. Defaults to None.
-    """
-    # If prompt is not None and is not a list, convert it to a list
-    if prompt is not None and not isinstance(prompt, list):
-        prompt = [prompt]
-
+def send_global_message(msg):
     for player in player_manager.players:
         if player.loggedin:
-            player_msg = msg
-            # If the player is not in the excluded list, append the prompt
-            if prompt is None or player not in prompt:
-                player_msg += "\n" + player.get_prompt()
-            send_message(player, player_msg)
+            send_message(player, msg)
         
 def send_message(player, msg):
     if player.character is not None and player.character.NPC is True:
         return
-    try:
-        player.socket.sendall(msg.encode('utf-8'))
-    except (BrokenPipeError, OSError):
-        handle_disconnection(player)
-
-def send_prompt_to_room(room , excluded_player=None, newline=True):
-    for player in room.get_players():
-        if player.character.NPC is False and player != excluded_player and player.character.is_awake():
-            msg = player.get_prompt()
-            if newline:
-                msg += "\n"
-            send_message(player, msg)
+    player.output_buffer += msg
+    
+def process_output():
+    for player in player_manager.get_players():
+        if player.output_buffer:
+            if player.loggedin:
+                player.output_buffer = "\n" + player.output_buffer
+                player.output_buffer += player.character.get_prompt()
+            try:
+                player.socket.sendall(player.output_buffer.encode('utf-8'))
+            except (BrokenPipeError, OSError):
+                handle_disconnection(player)
+            player.output_buffer = ""
               
 # Character login functions
     
@@ -219,7 +203,7 @@ def finish_login(player, msg, log_msg):
     player.set_room(room)
     send_message(player, msg)
     log_info(log_msg)
-    send_global_message(colourize(f"\n[INFO]: {player.name} has entered the game.", "red"))
+    send_global_message(colourize(f"\n[INFO]: {player.name} has entered the game.\n", "red"))
     send_room_message(player.current_room, colourize(f"\n{player.name} suddenly appears in the room.", "green"), excluded_player=player)
     del player.reconnect_prompt
     del player.awaiting_reconnect_confirmation

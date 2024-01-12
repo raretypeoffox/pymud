@@ -4,7 +4,7 @@ import mud_consts
 from mud_shared import log_info, log_error, dice_roll, random_percent, colourize, first_to_upper, report_mob_health
 
 from mud_world import mob_instance_manager
-from mud_comms import send_room_message_processing, send_message, send_room_message, send_prompt_to_room, send_global_message
+from mud_comms import send_room_message_processing, send_message, send_room_message, send_global_message
 from mud_objects import combat_manager, room_manager, reset_manager
 
 def return_PC_and_NPC(character_one, character_two):
@@ -47,7 +47,6 @@ def process_victory(player, mob_level):
         send_global_message(colourize(f"\n[INFO]: {player.name} has reached level {player.character.level}!", "red"), player)
         send_message(player, "\n" + colourize(gain_msg,"cyan"))
         
-    send_message(player, player.get_prompt())
 
 def deal_damage(attacker, defender, damage, msg, type=0):
     
@@ -65,14 +64,12 @@ def deal_damage(attacker, defender, damage, msg, type=0):
             mob_level = NPC.character.level
             process_mob_death(PC, NPC)
             msg = colourize(f"{first_to_upper(defender.name)} is dead!!!\n", "yellow")
-            send_room_message(PC.current_room, msg, prompt=False)
-            send_prompt_to_room(PC.current_room, excluded_player=PC, newline=False)
             process_victory(PC, mob_level)
         elif attacker == NPC:
 
             send_room_message(PC.current_room, colourize(f"{PC.name} is dead!!!\n", "red"), excluded_player=PC, excluded_msg=colourize("You are dead!!!", "red"))
             send_message(PC, colourize(PC.character.death_xp_loss(), "red"))
-            send_message(PC, f"\n\n\nYou wake back up along the shoreline.\n{PC.get_prompt()}")
+            send_message(PC, f"\n\n\nYou wake back up along the shoreline.")
             PC.move_to_room(room_manager.get_room_by_vnum(3001))
             PC.character.current_hitpoints = PC.character.max_hitpoints // 2
             return
@@ -176,7 +173,6 @@ def test_kill_mob(player, mob):
     if combat_manager.get_current_target(player):
         send_message(player, report_mob_health(combat_manager.get_current_target(player)))
 
-    send_prompt_to_room(player.current_room, excluded_player=player)
 
 
 def combat_loop():
@@ -190,17 +186,13 @@ def combat_loop():
             continue
         combat_round(combatant, combat_manager.get_current_target(combatant))
            
-    # At the end of the round, send the mob's health and prompt to all players
-    rooms_with_players = set()
     for combatant in combat_manager.get_characters_in_combat():
         if combatant is None or combat_manager.get_current_target(combatant) is None:
             continue
         if combatant.character.NPC is False:
             send_message(combatant, report_mob_health(combat_manager.get_current_target(combatant)))
-            rooms_with_players.add(combatant.current_room)
+
     
-    # Make sure even folks not in combat get a prompt after the combat round is over       
-    for room in rooms_with_players:
-        send_prompt_to_room(room)
+
 
 

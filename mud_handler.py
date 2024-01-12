@@ -190,7 +190,6 @@ def chat_command(player, argument):
     for other_player in player_manager.get_players():
         if other_player != player and other_player.loggedin:
             msg = colourize(f"{player.name} chats '{argument}'\n", "cyan")
-            msg += other_player.get_prompt()
             send_message(other_player, f"{msg}")
         elif other_player == player:
             msg = colourize(f"You chat '{argument}'\n", "cyan")
@@ -558,7 +557,6 @@ def handle_player(player, msg):
     else:
         send_message(player, "I'm sorry, I don't understand you.\n")
         
-    send_message(player, player.get_prompt())
         
         
 def move_player(player, old_room_vnum, new_room_vnum, msg_to_room=None, msg_to_player=None):

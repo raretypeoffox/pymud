@@ -238,6 +238,7 @@ class Player:
     def __init__(self, fd):
         self.fd = fd
         self.socket = None
+        self.output_buffer = ""
         self.loggedin = False
         self.reconnect_prompt = False
         self.awaiting_reconnect_confirmation = False
