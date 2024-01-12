@@ -1,5 +1,6 @@
 import time
 
+import mud_consts
 from mud_shared import log_info, log_error, dice_roll, random_percent, colourize, first_to_upper, report_mob_health
 
 from mud_world import mob_instance_manager
@@ -148,21 +149,18 @@ def combat_round(combatant_one, combatant_two, type=0):
     multi_hit(combatant_one, combatant_two, type)
      
 
-def attempt_flee(combantant_one, combatant_two):
-    # add random chance to flee
-    if not combat_manager.in_combat(combantant_one):
-        send_message(combantant_one, "You are not in combat!\n")
-        return False
+def attempt_flee(combantant_one, combatant_two, random_door):
     
-    flee_chance = 0.5
+    # might need to balance flee_chance later on
+    flee_chance = 0.75 + (combantant_one.character.dex - combatant_two.character.dex) + (combantant_one.character.wis - 10)
+    
     if random_percent() < flee_chance:
-        send_room_message(combantant_one, f"{combantant_one.name} flees in terror!\n")
+        send_room_message(combantant_one.current_room, f"{combantant_one.name} flees {mud_consts.EXIT_NAMES[random_door]} in terror!\n", excluded_player=[combantant_one, combatant_two], excluded_msg=[f"You flee {mud_consts.EXIT_NAMES[random_door]} in terror!\n", f"{combantant_one.name} flees {mud_consts.EXIT_NAMES[random_door]} from you in terror!\n"]) 
         combat_manager.end_combat(combantant_one, combatant_two)
         combat_manager.end_combat(combatant_two, combantant_one)
-        send_message(combantant_one, combantant_one.get_prompt())
+        combantant_one.move_to_room(room_manager.get_room_by_vnum(combantant_one.current_room.doors[random_door]["to_room"]))
         return True
     else:
-        send_message(combantant_one, "You fail to flee!\n")
         return False
     
 

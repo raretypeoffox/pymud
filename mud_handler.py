@@ -7,7 +7,8 @@ from mud_shared import colourize, is_NPC, report_mob_health, first_to_upper, log
 
 from mud_world import room_manager
 from mud_objects import player_db, combat_manager
-from mud_combat import test_kill_mob
+from mud_combat import test_kill_mob, attempt_flee
+from mud_spells import do_cast
 
 def kill_command(player, argument):
     if argument == '':
@@ -25,6 +26,31 @@ def kill_command(player, argument):
         send_message(player, "No mob with that name found.\n")
     else:
         test_kill_mob(player, mob)
+
+def flee_command(player, argument):
+    if combat_manager.in_combat(player) == False:
+        send_message(player, "You aren't fighting anyone!\n")
+        return
+    
+    random_door = player.current_room.choose_random_door(exclude_other_area=False)
+
+    if random_door is None:
+        send_message(player, "There's no where to flee to!\n")
+        return
+    
+    flee_success = attempt_flee(player, combat_manager.get_current_target(player), random_door)
+    
+    if flee_success:
+        # todo add to mob's aggro list
+        send_message(player, colourize(player.character.flee_xp_loss(), "red"))
+        look_command(player, "")
+    else:
+        send_message(player, "You fail to flee!\n")
+        send_message(player, colourize(player.character.flee_xp_loss(), "red"))
+        pass  
+
+def cast_command(player, argument):
+    do_cast(player)
     
 def sleep_command(player, argument):
     current_position = player.character.get_position()
@@ -64,6 +90,30 @@ def rest_command(player, argument):
 def inventory_command(player, argument):
     send_message(player, player.get_inventory_description())
 
+def get_object(player, object):
+    # if object.is_takeable() == False:
+    #     send_message(player, "You can't take that.\n")
+    #     return
+    
+    # if player.character.is_carrying(object):
+    #     send_message(player, "You are already carrying that.\n")
+    #     return
+    
+    # if player.character.can_carry(object) == False:
+    #     send_message(player, "You can't carry any more.\n")
+    #     return
+    object.pickup(player)
+    send_message(player, f"You get {object.name}.\n")
+    send_room_message(player.current_room, f"{player.name} gets {object.name}.\n", excluded_player=player)
+
+def drop_object(player, object):
+    # if object.is_droppable() == False:
+    # etc
+    
+    object.drop(player)
+    send_message(player, f"You drop {object.name}.\n")
+    send_room_message(player.current_room, f"{player.name} drops {object.name}.\n", excluded_player=player)
+    
 def get_command(player, argument):
     if argument == '':
         send_message(player, "Get what?\n")
@@ -80,33 +130,19 @@ def get_command(player, argument):
 
     else: # picking up from ground
         if argument.split()[0].lower() == 'all':
-            # todo
-            pass
-    
+            # todo add functionality for "you get several items"
+            for object in set(player.current_room.object_list):
+                get_object(player, object)
+            return
 
-    
         object = player.current_room.search_objects(argument)
         
         if object is None:
             send_message(player, "No item with that name found.\n")
             return
         
-        # if object.is_takeable() == False:
-        #     send_message(player, "You can't take that.\n")
-        #     return
+        get_object(player, object)
         
-        # if player.character.is_carrying(object):
-        #     send_message(player, "You are already carrying that.\n")
-        #     return
-        
-        # if player.character.can_carry(object) == False:
-        #     send_message(player, "You can't carry any more.\n")
-        #     return
-        
-        object.pickup(player)
-        send_message(player, f"You get {object.name}.\n")
-        send_room_message(player.current_room, f"{player.name} gets {object.name}.\n", excluded_player=player)
-
 def drop_command(player, argument):
     if argument == '':
         send_message(player, "Drop what?\n")
@@ -118,8 +154,11 @@ def drop_command(player, argument):
         return
     
     if argument.split()[0].lower() == 'all':
-        # todo
-        pass
+        print("drop all")
+        for object in list(player.inventory_list.values())[::-1]:
+            print(object)
+            drop_object(player, object)
+        return
     
     object = player.search_objects(argument)
     
@@ -127,9 +166,7 @@ def drop_command(player, argument):
         send_message(player, "No object with that name found.\n")
         return
     
-    object.drop(player)
-    send_message(player, f"You drop {object.name}.\n")
-    send_room_message(player.current_room, f"{player.name} drops {object.name}.\n", excluded_player=player)
+    drop_object(player, object)
 
 def say_command(player, argument):
     if argument == '':
@@ -436,6 +473,8 @@ def test_command(player, argument):
 
 commands = {
     'kill': [kill_command],
+    'flee': [flee_command],
+    'cast': [cast_command],
     'stand': [stand_command],
     'wake': [stand_command],
     'rest': [rest_command],

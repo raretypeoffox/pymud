@@ -461,6 +461,11 @@ class Character:
         death_xp_loss = dice_roll(self.level, 10, 25)
         self.xp -= death_xp_loss
         return f"You have lost {death_xp_loss} experience!\n"
+    
+    def flee_xp_loss(self):
+        flee_xp_loss = dice_roll(self.level, 5, 10)
+        self.xp -= flee_xp_loss
+        return f"You have lost {flee_xp_loss} experience!\n"
             
     def level_up(self):
         self.level += 1

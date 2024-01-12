@@ -19,17 +19,16 @@ def send_room_message_processing(player, target, msg):
         log_error(f"{player.name} has no room instance")
         return
     
+    
     msg_to_player = msg
     msg_to_player = msg_to_player.replace("$A", "you")
     msg_to_player = msg_to_player.replace("$e", "")
     msg_to_player = msg_to_player.replace("$s", "")
     msg_to_player = msg_to_player.replace("$D", target.name)
-    msg_to_player = first_to_upper(msg_to_player)
     
     msg = msg.replace("$s", "s")
     msg = msg.replace("$e", "e")
     msg = msg.replace("$A", player.name)
-    msg = first_to_upper(msg)
     
     msg_to_target = msg
     msg_to_target = msg_to_target.replace("$D", "you")
@@ -37,6 +36,12 @@ def send_room_message_processing(player, target, msg):
     msg_to_room = msg
     msg_to_room = msg_to_room.replace("$D", target.name)
     
+    msg_to_player = first_to_upper(msg_to_player)
+    msg_to_target = first_to_upper(msg_to_target)
+    msg_to_room = first_to_upper(msg_to_room)
+    # print(msg_to_player)
+    # print(msg_to_target)
+    # print(msg_to_room)
     send_room_message(player.current_room, msg_to_room, [player, target], [msg_to_player, msg_to_target], prompt=False)
     
 

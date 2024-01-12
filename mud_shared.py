@@ -1,6 +1,7 @@
 # mud_shared.py
 
 import random
+import re
 from datetime import datetime
 import mud_consts
 
@@ -83,8 +84,34 @@ def dice_roll(num, size, bonus):
 def random_percent():
     return round(random.uniform(0,1), 4)
 
+# Compile the regular expression once, faster performance per copilot
+ansi_color_code_re = re.compile(r'\033\[\d+m')
+
 def first_to_upper(s):
-    return s[0].upper() + s[1:]
+    # Split the string by the newline character
+    lines = s.split('\n')
+
+    # Process each line individually
+    for i in range(len(lines)):
+        # Find all ANSI color codes at the beginning of the line
+        ansi_color_codes = ansi_color_code_re.findall(lines[i])
+        
+        # Get the color codes and the rest of the string
+        color_codes = ''.join(ansi_color_codes)
+        rest_of_string = lines[i][len(color_codes):]
+
+        # Capitalize the first character of the rest of the string
+        if rest_of_string:
+            rest_of_string = rest_of_string[0].upper() + rest_of_string[1:]
+
+        # Combine the color codes and the rest of the string
+        lines[i] = color_codes + rest_of_string
+
+    # Join the lines back together
+    s = '\n'.join(lines)
+    return s
+
+
 
 def check_flag(act_flags, flag):
     ''' Checks if a flag is set in a bitfield.'''
