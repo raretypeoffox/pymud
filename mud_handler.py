@@ -113,7 +113,48 @@ def drop_object(player, object):
     object.drop(player)
     send_message(player, f"You drop {object.name}.\n")
     send_room_message(player.current_room, f"{player.name} drops {object.name}.\n", excluded_player=player)
+
+
+def give_command(player, argument):
+    current_position = player.character.get_position()
+    if current_position == "Sleep":
+        send_message(player, "You are sleeping!\n")
+        return
     
+    if argument == '':
+        send_message(player, "Give what?\n")
+        return
+    
+    argument = argument.lower().split()
+    
+    if len(argument) < 2:
+        send_message(player, "Give what to whom?\n")
+        return
+    
+    player_in_room = player.current_room.search_players(argument[1])
+    mob_in_room = player.current_room.search_mobs(argument[1])
+    
+    if player_in_room is None and mob_in_room is None:
+        send_message(player, "There's no one here with that name.\n")
+        return
+    
+    object = player.search_objects(argument[0])
+        
+    if object is None:
+        send_message(player, "No item with that name found.\n")
+        return
+    
+    if player_in_room:
+        send_message(player, f"You give {object.name} to {player_in_room.name}.\n")
+        send_message(player_in_room, f"{player.name} gives you {object.name}.\n")
+        send_room_message(player.current_room, f"{player.name} gives {object.name} to {player_in_room.name}.\n", excluded_player=[player, player_in_room])
+        object.give(player, player_in_room)
+    elif mob_in_room:
+        send_message(player, f"You give {object.name} to {mob_in_room.name}.\n")
+        send_room_message(player.current_room, f"{player.name} gives {object.name} to {mob_in_room.name}.\n", excluded_player=player)
+        object.give(player, mob_in_room)
+
+
 def get_command(player, argument):
     if argument == '':
         send_message(player, "Get what?\n")
@@ -480,6 +521,7 @@ commands = {
     'rest': [rest_command],
     'sleep': [sleep_command],
     'inventory' : [inventory_command],
+    'give': [give_command],
     'get': [get_command],
     'drop': [drop_command],
     'say': [say_command],

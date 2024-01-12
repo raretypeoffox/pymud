@@ -6,7 +6,7 @@ import socket
 
 VERSION = "0.0.1"
 
-from mud_comms import handle_new_client, handle_shutdown, player_manager, handle_disconnection, handle_client_login
+from mud_comms import handle_new_client, handle_shutdown, player_manager, handle_disconnection, handle_client_login, process_output
 from mud_handler import handle_player
 from mud_world import build_world, reset_world, build_objects
 from mud_shared import log_info, log_error
@@ -62,7 +62,7 @@ def game_loop(server_socket):
                 handle_disconnection(player, "Connection reset by peer")
             except BlockingIOError:
                 pass # No data received
-        
+        process_output()
 
         # Update game state
         update_game_state()
@@ -73,8 +73,9 @@ def game_loop(server_socket):
 def update_game_state():
     
     combat_loop()
-    
+    process_output()
     timed_events()
+    process_output()
 
 
 def shutdown_handler(signum, frame):

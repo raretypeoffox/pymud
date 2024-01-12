@@ -136,7 +136,7 @@ class ObjectDatabase:
         self.conn.commit()
 
     def load_objects(self):
-        print("Object DB Loading...")
+        # print("Object DB Loading...")
         if self.conn is None:
             log_error("Object DB Error: Database connection is not open")
             return []
@@ -171,7 +171,7 @@ class ObjectDatabase:
             except json.JSONDecodeError:
                 log_error(f"Object DB Error: Invalid JSON in enchantments: {row[11]}")
                 continue
-            print(obj)
+            # print(obj)
             objects.append(obj)
         return objects
     
@@ -989,7 +989,8 @@ class MobInstance:
         
         # todo
         self.equipment = Equipment()
-        self.inventory = []
+        self.inventory = set() # set of object UUIDs (saved)
+        self.inventory_list = {} # key: UUID, value: ObjectInstance (not saved)
         
         self.aggro_list = []
 
@@ -1013,13 +1014,20 @@ class MobInstance:
             description.append(equipped)
         if self.inventory:
             description.append("You peek into their inventory and see:")
-            for item in self.inventory:
+            for item in self.inventory_list.values():
                 description.append(f"\t{item.template.short_description}")
+
+        return "\n".join(description) + "\n"
         
-        return "\n".join(description)
+    def add_inventory(self, obj_uuid):
+        self.inventory.add(obj_uuid)
+        obj = object_instance_manager.get_object_by_uuid(obj_uuid)
+        if obj is not None:
+            self.inventory_list[obj_uuid] = obj
         
-    def add_item(self, item):
-        self.inventory.append(item)
+    def remove_inventory(self, obj_uuid):
+        self.inventory.remove(obj_uuid)
+        del self.inventory_list[obj_uuid]
         
     def get_hitroll(self):
         return self.template.hitroll
@@ -1226,7 +1234,29 @@ class ObjectInstance:
         self.update_location("room", player.current_room.vnum, player.current_room)
         self.save()
         return True
+     
+    def give(self, player, target):
+        if self.uuid not in player.inventory:
+            log_error(f"Object give: object {self.vnum}, {self.name} not in {player.name} inventory")
+            return False
         
+        if self.state == mud_consts.OBJ_STATE_LOCKER or self.state == mud_consts.OBJ_STATE_EQUIPPED:
+            log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
+            return False
+        
+        target_is = "player"
+        
+        if target.character.NPC:
+            if self.state != mud_consts.OBJ_STATE_SPECIAL and self.state != mud_consts.OBJ_STATE_QUEST:
+                self.update_state(mud_consts.OBJ_STATE_DROPPED)
+            target_is = "mob"
+
+        self.update_location(target_is, target.name, target)    
+        player.remove_inventory(self.uuid)
+        target.add_inventory(self.uuid)
+        
+        self.save()
+        return True
        
     
     # for debugging
