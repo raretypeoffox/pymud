@@ -46,7 +46,7 @@ Greeting = """
      ` ``
 
                 **** Welcome to Mystic Realms! ****
-                **** Based on PyMUD by Vagonuth ****
+                **** Based on MUDPy by Vagonuth ****
 
 """
            

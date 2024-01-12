@@ -74,6 +74,7 @@ def tick_loop():
         
     player_manager.save_all_players() # maybe move to long tick loop?
     do_specials()
+    object_instance_manager.reset_objects()
         
 def mini_tick_loop():
     if not time_manager.next_mini_tick():

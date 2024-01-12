@@ -868,6 +868,7 @@ class ResetObject:
         self.obj_vnum = obj_vnum
         self.room_vnum = room_vnum
 
+
 class Resets:
     def __init__(self):
         self.mob_resets = []
@@ -1030,6 +1031,18 @@ class ObjectInstanceManager:
     
     def get_all_instances(self):
         return [obj for obj_list in self.object_instances.values() for obj in obj_list]
+    
+    def reset_objects(self):
+        for obj_reset in reset_manager.object_resets:
+            for obj_to_check in self.get_all_instances_by_vnum(obj_reset.obj_vnum):
+                if not (obj_to_check.location_type == "room" and obj_to_check.location == obj_reset.room_vnum):
+                    object = ObjectInstance(object_manager.get_object(obj_reset.obj_vnum))
+                    self.add_object(object)
+                    room = room_manager.get_room_by_vnum(obj_reset.room_vnum)
+                    room.add_object(object)
+                    object.update_location("room", obj_reset.room_vnum, room)
+                    
+ 
 
 # need to set up methods for room and mobs
 class ObjectInstance:

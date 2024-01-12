@@ -3,7 +3,7 @@ from datetime import datetime
 
 import mud_consts
 from mud_comms import send_message, send_room_message, player_manager, handle_disconnection
-from mud_shared import colourize, is_NPC, report_mob_health, first_to_upper
+from mud_shared import colourize, is_NPC, report_mob_health, first_to_upper, log_error
 
 from mud_world import room_manager
 from mud_objects import player_db, combat_manager
@@ -176,6 +176,14 @@ def who_command(player, argument):
     send_message(player, colourize("---------\n", "green"))
     count = 0
     for other_player in player_manager.get_players():
+        if other_player is None:
+            log_error("Who: other_player is None")
+            continue
+        if other_player.loggedin == False:
+            continue
+        if other_player.character.race == '':
+            log_error("Who: why are we here?")
+            continue
         send_message(player, colourize(f"[{other_player.character.level : >4} {mud_consts.RACES_ABV[other_player.character.race]: <5}] {other_player.name} {other_player.get_title()}\n", "green"))
         count += 1
     send_message(player, colourize(f"\n{count} players online.\n", "green"))
@@ -372,7 +380,7 @@ def player_movement(player, direction):
             else:
                 send_message(player, "The door is locked.\n")
         else:
-            send_message(player, "There is no door that way.\n")
+            send_message(player, "There is no exit that way.\n")
             
 def goto_command(player, argument):
     if argument == '':

@@ -168,6 +168,9 @@ def attempt_flee(combantant_one, combatant_two):
     
 
 def test_kill_mob(player, mob):
+    if combat_manager.in_combat(player):
+        send_message(player, "You are already in combat!\n")
+        return
     send_message(player, f"You attack {mob.name}!\n")
     combat_manager.start_combat(player, mob)
     combat_manager.start_combat(mob, player)

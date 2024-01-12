@@ -68,8 +68,8 @@ def send_global_message(msg, prompt=True):
     for player in player_manager.players:
         if player.loggedin:
             if prompt:
-                msg += "\n" + player.get_prompt()
-            send_message(player, msg)
+                player_msg = msg + "\n" + player.get_prompt()
+            send_message(player, player_msg)
         
 def send_message(player, msg):
     if player.character is not None and player.character.NPC is True:
