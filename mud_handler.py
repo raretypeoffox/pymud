@@ -188,10 +188,11 @@ def chat_command(player, argument):
         return
     
     for other_player in player_manager.get_players():
-        if other_player != player:
+        if other_player != player and other_player.loggedin:
             msg = colourize(f"{player.name} chats '{argument}'\n", "cyan")
+            msg += other_player.get_prompt()
             send_message(other_player, f"{msg}")
-        else:
+        elif other_player == player:
             msg = colourize(f"You chat '{argument}'\n", "cyan")
             send_message(player, msg)
 
@@ -527,6 +528,8 @@ def handle_player(player, msg):
         'd': 'down',
         'l': 'look',
         'i': 'inventory',
+        'j': 'scan',
+        'x': 'scan'
         # Add more shortcuts here...
     }
 

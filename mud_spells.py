@@ -10,7 +10,7 @@ from mud_objects import combat_manager
 
 def spell_magic_missile(caster, target):
     
-    caster.character.current_mana -= 25
+    caster.character.current_mana -= 30
     
     num_dice = 4 + (caster.character.int - 10)
     
@@ -32,7 +32,7 @@ def spell_magic_missile(caster, target):
 def do_cast(caster, target=None):
     
     
-    if caster.character.current_mana < 25:
+    if caster.character.current_mana < 30:
         send_message(caster, "You don't have enough mana to cast a spell!\n")
         return
     

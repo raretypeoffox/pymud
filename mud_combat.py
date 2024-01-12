@@ -4,7 +4,7 @@ import mud_consts
 from mud_shared import log_info, log_error, dice_roll, random_percent, colourize, first_to_upper, report_mob_health
 
 from mud_world import mob_instance_manager
-from mud_comms import send_room_message_processing, send_message, send_room_message, send_prompt_to_room
+from mud_comms import send_room_message_processing, send_message, send_room_message, send_prompt_to_room, send_global_message
 from mud_objects import combat_manager, room_manager, reset_manager
 
 def return_PC_and_NPC(character_one, character_two):
@@ -44,7 +44,8 @@ def process_victory(player, mob_level):
     gain_msg = player.character.gain_experience(xp)
     if gain_msg != "":
         # Level!
-        send_message(player, colourize(gain_msg,"cyan"))
+        send_global_message(colourize(f"\n[INFO]: {player.name} has reached level {player.character.level}!", "red"), player)
+        send_message(player, "\n" + colourize(gain_msg,"cyan"))
         
     send_message(player, player.get_prompt())
 

@@ -69,11 +69,24 @@ def send_room_message(room, msg, excluded_player=None, excluded_msg=None, prompt
                 if index < len(excluded_msg):
                     send_message(player, excluded_msg[index])
                 
-def send_global_message(msg, prompt=True):
+def send_global_message(msg, prompt=None):
+    """
+    Sends a global message to all logged-in players, excluding those in the prompt list.
+
+    Args:
+        msg (str): The message to be sent.
+        prompt (list or Player, optional): A player or list of players who should not receive the message. Defaults to None.
+    """
+    # If prompt is not None and is not a list, convert it to a list
+    if prompt is not None and not isinstance(prompt, list):
+        prompt = [prompt]
+
     for player in player_manager.players:
         if player.loggedin:
-            if prompt:
-                player_msg = msg + "\n" + player.get_prompt()
+            player_msg = msg
+            # If the player is not in the excluded list, append the prompt
+            if prompt is None or player not in prompt:
+                player_msg += "\n" + player.get_prompt()
             send_message(player, player_msg)
         
 def send_message(player, msg):
