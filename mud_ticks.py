@@ -13,11 +13,11 @@ class TimeManager:
         self.startup_time = time.time()
         
         self.last_tick = time.time()
-        self.tick_length = 30
+        self.tick_length = 30 * 1000
         self.ticks_elapsed = 0
         
         self.last_mini_tick = time.time()
-        self.mini_tick_length = 5
+        self.mini_tick_length = 5 * 1000
         
         self.last_long_tick = time.time()
         self.long_tick_length = (60 * 15) # fixed 15 minutes
@@ -52,8 +52,8 @@ class TimeManager:
             return False
         
     def next_long_tick(self):
-        elapsed_time_ms = (time.time() - self.last_long_tick) * 1000
-        if elapsed_time_ms > self.long_tick_length:
+        elapsed_time_s = (time.time() - self.last_long_tick)
+        if elapsed_time_s > self.long_tick_length:
             self.last_long_tick = time.time()
             self.long_ticks_elapsed += 1
             return self.long_ticks_elapsed
@@ -65,7 +65,7 @@ time_manager = TimeManager()
 def tick_loop():
     if not time_manager.next_tick():
         return
-    
+
     for player in player_manager.get_players():
         player.character.tick()
     
@@ -78,7 +78,7 @@ def tick_loop():
 def mini_tick_loop():
     if not time_manager.next_mini_tick():
         return
-    
+
     # for non-sentinel mobs, small chance for them to move
     for mob in mob_instance_manager.get_all_instances():
         if mob.template.check_if_move():
@@ -88,7 +88,7 @@ def mini_tick_loop():
 def long_tick_loop():
     if not time_manager.next_long_tick():
         return
-    
+    print("longtick")
     object_instance_manager.save_objects()          
     do_imp()
     
@@ -97,7 +97,6 @@ def do_imp():
     if len(time_manager.imp_list) > 0:
         for obj in time_manager.imp_list:
             if obj is not None and obj.state == mud_consts.OBJ_STATE_DROPPED and obj.insured == None:
-                print(obj)
                 if obj.location_instance is None:
                     log_error(f"Object {obj.name} has no location room instance but is ready to be imped")
                     continue

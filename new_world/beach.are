@@ -81,7 +81,7 @@ giving it a menacing appearance. The spider moves with an eerie grace,
 its legs gently tapping on the damp cave surface.
 ~
 64 0 0 S
-2 0 10 3d4+5 1d4+1
+2 0 10 4d4+5 1d4+1
 0 0
 0 0 1
 
@@ -96,7 +96,7 @@ cave's darkness. Its tiny, sharp teeth are visible when it yawns or screeches,
 and it has keen ears that twitch at the slightest sound.
 ~
 2|64 0 0 S
-2 0 10 3d4+5 1d4+1
+2 0 10 4d4+5 1d4+1
 0 0
 0 0 1
 
@@ -295,7 +295,7 @@ D1
 D3
 ~
 ~
-0 0 3009
+0 0 3100
 S
 
 #0

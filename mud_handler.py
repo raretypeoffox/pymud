@@ -304,7 +304,8 @@ def look_command(player, argument):
             if mob_names != '':
                 send_message(player, f"{mob_names}")
     else:
-          
+        # bug: 2. only works within a group (ie will look at second mob but won't look at second object if one in room and one in inventory)) 
+        
         mob = room.search_mobs(argument)
         if mob is not None:
             send_message(player, f"{mob.get_description()}\n")
@@ -331,7 +332,19 @@ def look_command(player, argument):
             send_message(player, f"{extended_description["description"]}\n")
             return
         
+        inventory = player.search_objects(argument)
+        if inventory is not None:
+            send_message(player, f"{inventory.get_description()}\n")
+            return
+        
         send_message(player, colourize("You don't see that here.\n", "green"))     
+
+def scan_command(player, argument):
+    scan_msg = player.current_room.scan(player)
+    print(scan_msg)
+    if scan_msg != '':
+        send_message(player, scan_msg)
+
 
 def motd_command(player, argument):
     send_message(player, mud_consts.MOTD)
@@ -432,6 +445,7 @@ commands = {
     'quit': [quit_command],
     'save': [save_command],
     'look': [look_command],
+    'scan': [scan_command],
     'motd': [motd_command],
     'north': [north_command],
     'east': [east_command],

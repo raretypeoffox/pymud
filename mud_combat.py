@@ -4,8 +4,7 @@ from mud_shared import log_info, log_error, dice_roll, random_percent, colourize
 
 from mud_world import mob_instance_manager
 from mud_comms import send_room_message_processing, send_message, send_room_message, send_prompt_to_room
-
-from mud_objects import combat_manager
+from mud_objects import combat_manager, room_manager
 
 
 
@@ -30,14 +29,14 @@ def process_mob_death(player, mob):
 
 def process_victory(player, mob_level):
     level_diff = player.character.level - mob_level
-    
+    print("level diff: ", level_diff)
     if level_diff < 5:
-        num_dice = 5 - level_diff
+        num_dice = (5 - level_diff) * 2
         
         # bonus num_dice for being under level 20
         if player.character.level < 20:
-            low_level_bonus = (20 - player.character.level) // 2
-        xp = dice_roll(num_dice, 10, ((num_dice + low_level_bonus) * 5))
+            low_level_bonus = (20 - player.character.level) // 4
+        xp = dice_roll(num_dice  + low_level_bonus, 10, (num_dice * 5))
     else:
         xp = 0
     
@@ -70,10 +69,11 @@ def deal_damage(attacker, defender, damage, msg, type=0):
             process_victory(PC, mob_level)
         elif attacker == NPC:
 
-            # TODO PC Death
             send_room_message(PC.current_room, colourize(f"{PC.name} is dead!!!\n", "red"), excluded_player=PC, excluded_msg=colourize("You are dead!!!", "red"))
-            send_message(PC, f"\n\n\nYou are magically healed!\n{PC.get_prompt()}")
-            PC.character.current_hitpoints = PC.character.max_hitpoints
+            send_message(PC, colourize(PC.character.death_xp_loss(), "red"))
+            send_message(PC, f"\n\n\nYou wake back up along the shoreline.\n{PC.get_prompt()}")
+            PC.move_to_room(room_manager.get_room_by_vnum(3001))
+            PC.character.current_hitpoints = PC.character.max_hitpoints // 2
             return
         else:
             log_error("Unexpected result, neither PC nor NPC!")
@@ -106,21 +106,24 @@ def one_hit(attacker, defender, type=0):
         
     # print(f"Target roll: {target_roll}, dice roll: {roll}")
     
+    roll_msg = f" Dice: {roll} / Target: {target_roll} / AC: {armor_class} / HR: {hitroll}\n"
+    roll_msg = ""
+    
     if roll > target_roll:
         damroll_dice, dam_roll_size, dam_roll_bonus = attacker.character.get_damroll()
         damage = dice_roll(damroll_dice, dam_roll_size, dam_roll_bonus)
         # print(f"Damage: {damage} / Damroll: {damroll_dice}d{dam_roll_size}+{dam_roll_bonus}")
         if roll == 20:
             damage += dice_roll(damroll_dice, dam_roll_size, dam_roll_bonus)
-            msg = f"$A score$s a CRITICAL HIT on $D for {damage} damage!\n"
+            msg = f"$A score$s a CRITICAL HIT on $D for {damage} damage!{roll_msg}\n"
         else:
-            msg = f"$A hit$s $D for {damage} damage!\n"
+            msg = f"$A hit$s $D for {damage} damage!{roll_msg}\n"
         
         if damage <= 0:
             damage = 1
    
     else:
-        msg = f"$A miss$e$s $D!\n"
+        msg = f"$A miss$e$s $D!{roll_msg}\n"
 
     deal_damage(attacker, defender, damage, msg, type)
     
@@ -132,14 +135,14 @@ def multi_hit(attacker, defender, type=0):
     
     one_hit(attacker, defender, type)
         
-    if random_percent() < second_attack_chance:
-        one_hit(attacker, defender, type)
+    # if random_percent() < second_attack_chance:
+    #     one_hit(attacker, defender, type)
 
-    if random_percent() < third_attack_chance:
-        one_hit(attacker, defender, type)
+    # if random_percent() < third_attack_chance:
+    #     one_hit(attacker, defender, type)
         
-    if random_percent() < fourth_attack_chance:
-        one_hit(attacker, defender, type)
+    # if random_percent() < fourth_attack_chance:
+    #     one_hit(attacker, defender, type)
 
 def combat_round(combatant_one, combatant_two, type=0):
         
@@ -169,7 +172,8 @@ def test_kill_mob(player, mob):
     combat_manager.start_combat(player, mob)
     combat_manager.start_combat(mob, player)
     combat_round(player, mob)
-    send_message(player, report_mob_health(combat_manager.get_current_target(player)))
+    if combat_manager.get_current_target(player):
+        send_message(player, report_mob_health(combat_manager.get_current_target(player)))
 
     send_prompt_to_room(player.current_room, excluded_player=player)
 

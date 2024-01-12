@@ -1,0 +1,604 @@
+#AREA	{ 2  7} Vagonuth Forest~
+
+#MOBILES
+#3100
+playful squirrel~
+a playful squirrel~
+A playful squirrel darts across the forest floor, its tail flicking with each move.
+~
+The squirrel, with its glossy brown fur, seems perpetually on a mission, searching 
+for food and playfully hopping around. Its tiny paws handle acorns deftly as its 
+bright eyes survey the surroundings cautiously.
+~
+64 0 0 S
+2 1 10 2d10+5 1d4+1
+0 0
+0 0 1
+
+#3101
+curious rabbit~
+a curious rabbit~
+A soft-furred rabbit cautiously emerges from the underbrush, sniffing the air.
+~
+This fluffy rabbit has a coat of light brown fur, with a white tail that flicks
+as it moves. Its long ears constantly twitch, picking up even the slightest 
+sounds in its tranquil forest home.
+~
+64 0 0 S
+2 1 12 2d10+5 1d4+1
+0 0
+0 0 1
+
+#3102
+singing songbird~
+a singing songbird~
+A colorful songbird sings sweetly from a nearby branch.
+~
+The songbird's feathers are a vibrant mix of blues and yellows, creating a 
+striking contrast against the green leaves. Its melodious song fills the air,
+a symphony of the forest's life.
+~
+64 0 0 S
+2 1 12 2d10+5 1d4+1
+0 0
+0 0 1
+
+#3103
+timid deer~
+a timid deer~
+A graceful deer stands at the edge of a clearing, alert and poised.
+~
+The deer, with its smooth tan coat and gentle eyes, embodies the peaceful spirit
+of the forest. Its slender legs and agile movements showcase a delicate strength 
+as it grazes on tender foliage.
+~
+64 0 0 S
+3 1 11 2d10+12 1d4+2
+0 0
+0 0 1
+
+#3104
+busy woodpecker~
+a busy woodpecker~
+The rhythmic tapping of a woodpecker echoes from a tall oak tree.
+~
+This industrious woodpecker, with its sharp beak and distinct black and white feathers,
+works tirelessly. It moves up and down the tree's bark, pecking away in search of its 
+next meal.
+~
+64 0 0 S
+2 2 10 2d10+5 1d4+1
+0 0
+0 0 1
+
+#3105
+colorful butterfly~
+a colorful butterfly~
+A beautiful butterfly flits from flower to flower in the sunlit glade.
+~
+With wings that display a captivating pattern of colors, this butterfly seems to dance 
+in the air. The delicate grace with which it moves is a delightful spectacle, adding a 
+touch of magic to the forest.
+~
+64 0 0 S
+2 2 18 1d10+0 1d4+0
+0 0
+0 0 1
+
+#3106
+sealthy fox~
+a sealthy fox~
+A red fox slips silently through the shadows, barely making a sound.
+~
+This fox, with its vibrant red fur and alert ears, is the embodiment of slyness. Its eyes, 
+sharp and intelligent, scan the surroundings, ever in search of an opportunity or threat.
+~
+64 0 0 S
+3 1 11 5d8+2 1d4+3
+0 0
+0 0 1
+
+#3107
+chattering chipmunk~
+a chattering chipmunk~
+A chipmunk chatters noisily as it scampers along a fallen log.
+~
+This small chipmunk, with its distinctive striped back and bushy tail, is a bundle of energy.
+Its tiny hands deftly handle seeds and nuts, its rapid movements a constant blur of activity 
+in the still forest.
+~
+64 0 0 S
+2 1 10 2d10+5 1d4+1
+0 0
+0 0 1
+
+#3108
+slumbering bear~
+a slumbering bear~
+In the shadows of the cave, a large bear lies in deep slumber, its breathing deep and steady.
+~
+This enormous bear, nestled within the dim recesses of its cave, seems almost serene in its 
+sleep. Its thick coat, a blend of dark browns and black, rises and falls rhythmically with 
+each breath. Its massive paws, tipped with formidable claws, are tucked beneath its head, 
+lending it an unexpectedly peaceful appearance. Despite its current state of rest, the sheer
+size and muscular build of the bear serve as a potent reminder of the power it holds. 
+The cave's air is heavy with the scent of the bear, a mixture of earth and fur, underscoring
+the presence of a formidable creature even in repose.
+~
+66 0 0 S
+7 2 12 14d10+10 3d4+2
+0 0
+0 0 1
+
+#3109
+lone wolf~
+a lone wolf~
+A sleek, grey wolf prowls the area, its yellow eyes scanning intently.
+~
+This lone wolf, with its thick grey fur and lean, muscular build, radiates a quiet but 
+intimidating presence. Its sharp fangs are partially visible as it pants, and its ears 
+flick at every sound. Moving with a predator's confidence, it exudes a sense of danger 
+and cunning intelligence.
+~
+64 0 0 S
+5 2 12 8d8+2 2d4+3
+0 0
+0 0 1
+
+#0
+
+#OBJECTS
+
+#0
+
+#ROOMS
+#3100
+Forest Entrance~
+This dense forest opens up from the beach, with towering trees and a rich 
+underbrush. Sunlight filters through the canopy, creating a dappled pattern
+on the forest floor. The scent of pine and earth fills the air.
+~
+3100 0 3
+D0
+~
+~
+0 0 3104
+D1
+~
+~
+0 0 3009
+D3
+~
+~
+0 0 3101
+S
+#3101
+Twisting Pathway~
+A narrow, winding path cuts through the thick vegetation. The sounds of the 
+beach grow distant as the forest envelops you. Moss-covered stones line the
+pathway, leading deeper into the woods.
+~
+3100 0 3
+D0
+~
+~
+0 0 3105
+D1
+~
+~
+0 0 3100
+D3
+~
+~
+0 0 3102
+S
+#3102
+Whispering Clearing~
+This small clearing is alive with the whispering sounds of the wind through the 
+leaves. Wildflowers dot the area, providing a splash of color against the greens
+and browns of the forest.
+~
+3100 0 3
+D0
+~
+~
+0 0 3106
+D1
+~
+~
+0 0 3101
+D3
+~
+~
+0 0 3103
+S
+#3103
+Ancient Oak~
+Here stands an ancient oak tree, a grand sentinel of the forest. Its immense trunk,
+wide enough to require several people to encircle, rises majestically, with branches
+that stretch towards the heavens. The oak's gnarled roots, thick and sturdy, have 
+broken through the earth, creating natural benches around its base. The leaves form
+a dense canopy overhead, casting dappled shadows on the ground. The air is imbued 
+with a sense of timelessness, and the gentle rustling of the leaves seems to whisper
+secrets of the ages. A feeling of reverence pervades this spot, as if one has stepped
+into a sacred grove.
+~
+3100 0 3
+D0
+~
+~
+0 0 3107
+D1
+~
+~
+0 0 3102
+E
+ancient oak~
+There's something special about the ancient oak tree. Heightening your senses
+you hear a faint melody playing but you're not sure where it's coming from.
+~
+S
+#3104
+Shaded Grove~
+Tucked away from the main path, this secluded grove is a peaceful refuge. The ground
+is soft with fallen leaves, and the air is cool and still.
+~
+3100 0 0 3
+D0
+~
+~
+0 0 3108
+D2
+~
+~
+0 0 3100
+D3
+~
+~
+0 0 3105
+S
+#3105
+Babbling Brook~
+A small brook cuts through the forest, its waters clear and cold. The gentle babble 
+of the flowing water is soothing, and small fish can be seen darting in the shallows.
+~
+3100 0 0 3
+D0
+~
+~
+0 0 3109
+D1
+~
+~
+0 0 3104
+D2
+~
+~
+0 0 3101
+D3
+~
+~
+0 0 3106
+S
+#3106
+Hidden Glade~
+This hidden glade is a burst of light amidst the dense trees. Butterflies flit among 
+the wildflowers, and a sense of serenity pervades the air.
+~
+3100 0 0 3
+D0
+~
+~
+0 0 3110
+D1
+~
+~
+0 0 3105
+D2
+~
+~
+0 0 3102
+D3
+~
+~
+0 0 3107
+S
+#3107
+Rocky Outcrop~
+Rising abruptly from the forest floor is a large rocky outcrop. Moss and small shrubs
+cling to its surface, and from its top, one can catch glimpses of the forest spread out 
+below.
+~
+3100 0 0 3
+D0
+~
+~
+0 0 3111
+D1
+~
+~
+0 0 3106
+D2
+~
+~
+0 0 3103
+S
+#3108
+Thorny Thicket~
+This area of the forest is dense with brambles and thorn bushes. Small animal paths 
+crisscross through the undergrowth, and the sound of birdsong is ever-present.
+~
+3100 0 0 3
+D0
+~
+~
+0 0 3112
+D2
+~
+~
+0 0 3104
+D3
+~
+~
+0 0 3109
+S
+#3109
+Forest Crossroads~
+Several paths converge here, under the watchful eyes of ancient trees. A wooden 
+signpost points in various directions, though the destinations are worn and 
+difficult to read.
+~
+3100 0 0 3
+D0
+~
+~
+0 0 3113
+D1
+~
+~
+0 0 3108
+D2
+~
+~
+0 0 3105
+D3
+~
+~
+0 0 3110
+E
+signpost~
+Studying the signpost closer, you note an image of a keep in the north-west direction.
+~
+S
+#3110
+Mushroom Ring~
+A perfect circle of mushrooms grows here, adding a touch of mystery to the forest.
+The air seems different here, almost as if filled with ancient magic.
+~
+3100 0 0 3
+D0
+~
+~
+0 0 3114
+D1
+~
+~
+0 0 3109
+D2
+~
+~
+0 0 3106
+D3
+~
+~
+0 0 3111
+S
+#3111
+Sunlight Clearing~
+A break in the canopy above allows sunlight to flood this clearing. Wild grasses 
+grow tall here, and the buzzing of bees is a constant melody.
+~
+3100 0 0 3
+D0
+~
+~
+0 0 3115
+D1
+~
+~
+0 0 3110
+D2
+~
+~
+0 0 3107
+S
+#3112
+Fern Gully~
+Fern Gully is a lush passage through the forest, dense with vibrant green ferns and aged trees.
+Dappled sunlight filters through the leafy canopy, creating a tranquil atmosphere. The air, 
+rich with the scent of moss and earth, carries distant bird calls. The ground is a soft carpet 
+of ferns, swaying gently in the breeze.
+
+To the east, the forest thickens, and a faint path hints at a hidden cave. The sounds of the 
+forest hush near this path, suggesting the presence of a formidable creature in the vicinity. 
+The subtle shift in ambiance signals caution to those who venture towards the cave.
+~
+3100 0 0 3
+D1
+You spot a bear's den towards the east. Probably best to avoid it...~
+den~
+0 0 3117
+D2
+~
+~
+0 0 3108
+D3
+~
+~
+0 0 3113
+S
+#3113
+Overgrown Path~
+Nature has begun to reclaim this once-clear path. Vines and overgrown bushes make 
+the way forward challenging, but small wildlife trails suggest it's still in use.
+~
+3100 0 0 3
+D1
+~
+~
+0 0 3112
+D2
+~
+~
+0 0 3109
+D3
+~
+~
+0 0 3114
+S
+#3114
+Edge of the Meadow~
+The forest gradually opens up to a large meadow. Wildflowers sway in the breeze, 
+and in the distance, the silhouette of a crumbling keep looms, with its solitary 
+standing tower.
+~
+3100 0 0 3
+D1
+~
+~
+0 0 3113
+D2
+~
+~
+0 0 3110
+D3
+~
+~
+0 0 3115
+S
+#3115
+Meadow's Embrace~
+The meadow, a vibrant tapestry of wildflowers, spreads out under the open sky, 
+encircled by the forest's embrace. The air, sweet with floral scents, carries 
+the songs of birds and bees. In the distance, the crumbling keep casts a shadow 
+of ancient mysteries over the lush landscape. Its solitary tower stands in stark 
+contrast, a silent sentinel beckoning with tales of forgotten eras. Here, nature's
+serenity meets history's whisper, creating an atmosphere of tranquil wonder and 
+subtle intrigue.
+~
+3100 0 0 3
+D0
+~
+~
+0 0 3116
+D1
+~
+~
+0 0 3114
+D2
+~
+~
+0 0 3111
+S
+#3116
+Path to the Keep~
+Leading north from the meadow, this well-trodden path winds its way towards the
+enigmatic keep. The grass is trampled down, suggesting frequent use. The keep's 
+towering facade grows ever more imposing as you approach, its weathered stones 
+and ivy-clad walls exuding an air of ancient mysteries and long-forgotten tales. 
+The path is lined with occasional wildflowers, providing a stark contrast to the
+keep's solemn appearance.
+~
+3101 0 0 3
+D0
+~
+~
+0 0 3116
+D2
+~
+~
+0 0 3115
+S
+#3117
+The Slumbering Bear's Den~
+Hidden within a dense thicket, the entrance to this cave is draped in shadows, a quiet,
+almost ominous presence in the forest. As you step inside, the temperature drops, the air
+becoming cooler and tinged with the musky scent of wildlife. The cave walls are rugged 
+and damp, with faint streaks of minerals glinting in the sparse light that filters in. 
+In the far corner of the cave, a large bear lies in deep slumber, its massive form rising
+and falling with each slow, measured breath. The ground is scattered with leaves, twigs, 
+and remnants of the bear's past meals, creating a makeshift nest. The silence here is 
+profound, broken only by the occasional drip of water from the cave's ceiling and the 
+bear's rhythmic breathing. This secluded den, a sanctuary for the slumbering giant, 
+exudes a sense of primal solitude and untouched wilderness.
+~
+3101 0 0 3
+D3
+~
+~
+0 0 3112
+S
+
+#0
+
+#RESETS
+
+M 0 3100 4 3100     (squirrel)
+M 0 3100 4 3104     (squirrel)
+M 0 3100 4 3106     (squirrel)
+M 0 3100 4 3109     (squirrel)
+
+M 0 3101 3 3101     (rabbit)
+M 0 3101 3 3105     (rabbit)
+M 0 3101 3 3106     (rabbit)
+M 0 3101 3 3108     (rabbit)
+
+M 0 3102 3 3107     (songbird)
+M 0 3102 3 3110     (songbird)
+M 0 3102 3 3113     (songbird)
+
+M 0 3103 3 3110     (deer)
+M 0 3103 3 3113     (deer)
+M 0 3103 3 3115     (deer)
+
+M 0 3104 2 3102     (woodpecker)   
+M 0 3104 2 3111     (woodpecker)
+
+M 0 3105 2 3107     (butterfly)
+M 0 3105 2 3110     (butterfly)
+M 0 3105 2 3114     (butterfly)
+
+M 0 3106 2 3107     (fox)
+M 0 3106 2 3115     (fox)
+
+M 0 3107 2 3103     (chipmunk)
+M 0 3107 2 3111     (chipmunk)
+
+M 0 3108 1 3117     (bear)
+
+M 0 3109 2 3112     (wolf)
+M 0 3109 2 3116     (wolf)
+
+
+  
+
+  
+
+
+
+S
+
+
+#SHOPS
+
+0
+
+
+
+#SPECIALS
+
+S
+
+
+
+#$

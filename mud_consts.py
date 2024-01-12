@@ -184,7 +184,7 @@ EQ_SLOTS = {
   16384: "<held>"
 }
 
-
+EXIT_NAMES = ["north", "east", "south", "west", "up", "down"]
 
 #define ITEM_LIGHT		      1
 #define ITEM_SCROLL		      2

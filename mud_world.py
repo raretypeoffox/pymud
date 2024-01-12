@@ -141,6 +141,7 @@ def parse_room(lines):
     vnum = int(lines[0][1:])
     current_room = Room(vnum)
     current_room.name = lines[1][:-1]
+    print(current_room.name)
     current_room.description, offset = parse_multi_line(lines[2:])
     offset+=2
     
@@ -337,6 +338,14 @@ def reset_world():
                 # for i in range(mob_reset.max_count):
                 mob = MobInstance(mob_template)
                 mob_instance_manager.add_mob_instance(mob)
+                mob.character.ac = mob_template.ac
+                mob.character.hitroll = mob_template.hitroll
+                mob.character.max_hitpoints = mob_template.get_max_hitpoints()
+                mob.character.current_hitpoints = mob.character.max_hitpoints
+                mob.character.damdice_num = mob_template.damdice_num
+                mob.character.damdice_size = mob_template.damdice_size
+                mob.character.amdice_bonus = mob_template.damdice_bonus
+                mob.character.level = mob_template.level
                 mob.set_room(room)
                 room.add_mob(mob)
                 if mob_reset.equipment:

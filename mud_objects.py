@@ -317,10 +317,6 @@ class Player:
     def get_hitroll(self):
         return self.character.hitroll
     
-    def get_damroll(self):
-        return 1, 4, (self.character.str - 10)
-        # return self.character.damroll_dice, self.character.damroll_size, self.character.damroll_bonus
-    
     def get_AC(self):
         return self.character.ac
     
@@ -394,6 +390,10 @@ class Character:
         self.ac = 12
         self.hitroll = 2 
         
+        self.damdice_num = 1
+        self.damdice_size = 4
+        self.damdice_bonus = 2
+        
         self.xp = 0
         self.tnl = 1000
         self.gold = 0
@@ -421,7 +421,8 @@ class Character:
         return self.ac + self.dex - 10
     
     def get_damroll(self):
-        return 1, 4, (self.str - 10)
+        self.damdice_bonus = 2
+        return self.damdice_num, self.damdice_size + (self.str - 10), self.damdice_bonus + self.level
     
     def get_hp_pct(self):
         return (self.current_hitpoints / self.max_hitpoints)
@@ -453,6 +454,11 @@ class Character:
                 msg += f"You have gained a level!!!\n"
                 msg += self.level_up()      
         return msg
+    
+    def death_xp_loss(self):
+        death_xp_loss = dice_roll(self.level, 10, 25)
+        self.xp -= death_xp_loss
+        return f"You have lost {death_xp_loss} experience!\n"
             
     def level_up(self):
         self.level += 1
@@ -654,6 +660,9 @@ class MobTemplate:
             return True
 
         return False
+    
+    def get_max_hitpoints(self):
+        return dice_roll(self.hitdice_num, self.hitdice_size, self.hitdice_bonus)
         
 class ObjectTemplate:
     def __init__(self, vnum):
@@ -753,6 +762,20 @@ class Room:
             return random.choice(available_doors)
         else:
             return None
+        
+    def scan(self, player=None):
+        msg = ""
+        for exit in self.doors:
+            if self.doors[exit]["locks"] == 0:
+                msg += f"{first_to_upper(mud_consts.EXIT_NAMES[exit]): <10}"
+                if self.doors[exit]["description"] != "":
+                    msg += f"({self.doors[exit]["description"]})"
+                msg += "\n"
+                for mob in room_manager.get_room_by_vnum(self.doors[exit]["to_room"]).mob_list:
+                    msg += f"    {mob.template.short_desc}\n"
+            else:
+                msg += f"{first_to_upper(mud_consts.EXIT_NAMES[exit]): <10} Locked\n"
+        return msg
     
     def get_players(self):
         return self.player_list
