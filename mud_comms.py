@@ -16,6 +16,10 @@ player_manager = PlayerManager()
 
 def send_room_message_processing(player, target, msg):
     
+    target_name = ""
+    if target is not None:
+        target_name = target.name
+    
     if player.current_room is None:
         log_error(f"{player.name} has no room instance")
         return
@@ -25,25 +29,25 @@ def send_room_message_processing(player, target, msg):
     msg_to_player = msg_to_player.replace("$A", "you")
     msg_to_player = msg_to_player.replace("$e", "")
     msg_to_player = msg_to_player.replace("$s", "")
-    msg_to_player = msg_to_player.replace("$D", target.name)
+    msg_to_player = msg_to_player.replace("$D", target_name)
+    msg_to_player = first_to_upper(msg_to_player)
     
     msg = msg.replace("$s", "s")
     msg = msg.replace("$e", "e")
     msg = msg.replace("$A", player.name)
     
-    msg_to_target = msg
-    msg_to_target = msg_to_target.replace("$D", "you")
-    
     msg_to_room = msg
-    msg_to_room = msg_to_room.replace("$D", target.name)
-    
-    msg_to_player = first_to_upper(msg_to_player)
-    msg_to_target = first_to_upper(msg_to_target)
+    msg_to_room = msg_to_room.replace("$D", target_name)
     msg_to_room = first_to_upper(msg_to_room)
-    # print(msg_to_player)
-    # print(msg_to_target)
-    # print(msg_to_room)
-    send_room_message(player.current_room, msg_to_room, [player, target], [msg_to_player, msg_to_target])
+    
+    if target is not None:
+        msg_to_target = msg
+        msg_to_target = msg_to_target.replace("$D", "you")
+        msg_to_target = first_to_upper(msg_to_target)
+        
+        send_room_message(player.current_room, msg_to_room, [player, target], [msg_to_player, msg_to_target])
+    else:
+        send_room_message(player.current_room, msg_to_room, player, msg_to_player)
     
 
 def send_room_message(room, msg, excluded_player=None, excluded_msg=None):
@@ -67,10 +71,12 @@ def send_room_message(room, msg, excluded_player=None, excluded_msg=None):
                 index = excluded_player.index(player)
                 if index < len(excluded_msg):
                     send_message(player, excluded_msg[index])
-                
+       
+def send_info_message(msg, InfoType="Info", colour="red"):
+    send_global_message(colourize(f"[{InfoType}]: {msg}\n", colour))
+             
 def send_global_message(msg):
-    for player in player_manager.players:
-        if player.loggedin:
+    for player in player_manager.get_players(LoggedIn=True):
             send_message(player, msg)
         
 def send_message(player, msg):
@@ -79,7 +85,7 @@ def send_message(player, msg):
     player.output_buffer += msg
     
 def process_output(NewLineAtStart=True):
-    for player in player_manager.get_players():
+    for player in player_manager.get_players(LoggedIn=False):
         if player.output_buffer:
             if player.loggedin:
                 if NewLineAtStart:
@@ -212,7 +218,7 @@ def finish_login(player, msg, log_msg):
     player.set_room(room)
     send_message(player, msg)
     log_info(log_msg)
-    send_global_message(colourize(f"\n[INFO]: {player.name} has entered the game.\n", "red"))
+    send_info_message(f"{player.name} has entered the game.")
     send_room_message(player.current_room, colourize(f"\n{player.name} suddenly appears in the room.", "green"), excluded_player=player)
     del player.reconnect_prompt
     del player.awaiting_reconnect_confirmation
@@ -227,8 +233,8 @@ def handle_disconnection(player, msg=""):
     log_info(f"{player.name} disconnected: {msg}")
     player.current_room.remove_player(player)
     if player_manager.disconnect_player(player, msg) and player.name != None:
-       send_global_message(colourize(f"\n[INFO]: {player.name} has left the game.\n", "red")) 
-       send_room_message(player.current_room, colourize(f"\n{player.name} has left the game.", "green"), player)
+        send_info_message(f"{player.name} has left the game.")
+        send_room_message(player.current_room, colourize(f"\n{player.name} has left the game.", "green"), player)
     try:
         player.socket.close()
     except OSError:

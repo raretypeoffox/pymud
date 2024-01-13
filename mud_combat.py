@@ -4,7 +4,7 @@ import mud_consts
 from mud_shared import log_info, log_error, dice_roll, random_percent, colourize, first_to_upper, report_mob_health
 
 from mud_world import mob_instance_manager
-from mud_comms import send_room_message_processing, send_message, send_room_message, send_global_message
+from mud_comms import send_room_message_processing, send_message, send_room_message, send_global_message, send_info_message
 from mud_objects import combat_manager, room_manager, reset_manager
 
 def return_PC_and_NPC(character_one, character_two):
@@ -44,9 +44,25 @@ def process_victory(player, mob_level):
     gain_msg = player.character.gain_experience(xp)
     if gain_msg != "":
         # Level!
-        send_global_message(colourize(f"\n[INFO]: {player.name} has reached level {player.character.level}!", "red"))
-        send_message(player, "\n" + colourize(gain_msg,"cyan"))
-        
+        send_message(player, colourize(gain_msg,"cyan"))
+        send_info_message(f"{player.name} has reached level {player.character.level}!")
+
+def process_PC_death(player, mob=None):
+    send_room_message(player.current_room, colourize(f"{player.name} is dead!!!\n", "red"), excluded_player=player, excluded_msg=colourize("You are dead!!!", "red"))
+    send_message(player, colourize(player.character.death_xp_loss(), "red"))
+    if mob is not None:
+        send_info_message(f"{player.name} has died to {mob.name} at {player.current_room.name}!")
+    else:
+        send_info_message(f"{player.name} has died at {player.current_room.name}!")
+    send_message(player, f"\n\nYou wake back up with a serious headache.\n")
+           
+    if not hasattr(player.character, 'death_room'):
+        setattr(player.character, 'death_room', 3000)
+    elif player.character.death_room is None:
+        player.character.death_room = 3000
+    
+    player.move_to_room(room_manager.get_room_by_vnum(player.character.death_room))
+    player.character.current_hitpoints = player.character.max_hitpoints // 2
 
 def deal_damage(attacker, defender, damage, msg, type=0):
     
@@ -66,12 +82,7 @@ def deal_damage(attacker, defender, damage, msg, type=0):
             msg = colourize(f"{first_to_upper(defender.name)} is dead!!!\n", "yellow")
             process_victory(PC, mob_level)
         elif attacker == NPC:
-
-            send_room_message(PC.current_room, colourize(f"{PC.name} is dead!!!\n", "red"), excluded_player=PC, excluded_msg=colourize("You are dead!!!", "red"))
-            send_message(PC, colourize(PC.character.death_xp_loss(), "red"))
-            send_message(PC, f"\n\n\nYou wake back up along the shoreline.")
-            PC.move_to_room(room_manager.get_room_by_vnum(3001))
-            PC.character.current_hitpoints = PC.character.max_hitpoints // 2
+            process_PC_death(PC, NPC)
             return
         else:
             log_error("Unexpected result, neither PC nor NPC!")
@@ -162,7 +173,7 @@ def attempt_flee(combantant_one, combatant_two, random_door):
         return False
     
 
-def test_kill_mob(player, mob):
+def kill_mob(player, mob):
     if combat_manager.in_combat(player):
         send_message(player, "You are already in combat!\n")
         return
@@ -191,6 +202,7 @@ def combat_loop():
             continue
         if combatant.character.NPC is False:
             send_message(combatant, report_mob_health(combat_manager.get_current_target(combatant)))
+
 
     
 

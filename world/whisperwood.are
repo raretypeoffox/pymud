@@ -103,9 +103,31 @@ D0
 ~
 ~
 0 0 3303
+D2
+~
+~
+0 0 3307
 S
-
-
+#3307
+The Healer's Garden~
+Surrounded by high hedges, this secluded garden is a haven of medicinal herbs and vibrant wildflowers. The air is thick with the scent of lavender and rosemary. Bees buzz lazily between blooms, while druid healers quietly tend to their plants, humming softly as they work. A small bench under a flowering cherry tree offers a tranquil spot for rest.
+~
+3300 1024 3
+D0
+~
+~
+0 0 3306
+S
+#3308
+Garden's Root Chamber~
+Grogginess gives way to clarity as you awaken in a chamber formed by the intertwining roots of the Healer's Garden above. The air is damp and earthy, with tendrils of healing energy seeping from the roots into your being. You hear the faint rustle of leaves and the distant, melodic incantations of druids above, their voices weaving spells of restoration and life. Dappled light filters down through the root network, guiding you along a natural path that spirals gently upwards, back to the world of green and light.
+~
+3399 8192 0
+D4
+A path lined with luminescent moss and delicate flowers leads you gently upwards, back to the vibrant embrace of the garden above.~
+~
+0 0 3307
+S
 
 #0
 

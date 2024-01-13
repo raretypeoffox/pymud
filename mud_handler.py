@@ -7,8 +7,9 @@ from mud_shared import colourize, is_NPC, report_mob_health, first_to_upper, log
 
 from mud_world import room_manager
 from mud_objects import player_db, combat_manager
-from mud_combat import test_kill_mob, attempt_flee
+from mud_combat import kill_mob, attempt_flee
 from mud_spells import do_cast
+from mud_socials import handle_social, list_socials
 
 def kill_command(player, argument):
     if argument == '':
@@ -25,7 +26,7 @@ def kill_command(player, argument):
     if mob is None:
         send_message(player, "No mob with that name found.\n")
     else:
-        test_kill_mob(player, mob)
+        kill_mob(player, mob)
 
 def flee_command(player, argument):
     if combat_manager.in_combat(player) == False:
@@ -465,12 +466,11 @@ def goto_command(player, argument):
         send_message(player, "You must specify a room number.\n")
     else:
         room_id = int(argument)
-        try:
-            room = room_manager.get_room_by_vnum(room_id)
-        except:
-            room = None
+        room = room_manager.get_room_by_vnum(room_id)
+
         if room is None:
             send_message(player, "No room with that number found.\n")
+            return
               
         msg = colourize(f"{player.name} utters the word 'goto' and suddenly disappears!\n", "green")
         excluded_msg = colourize("You feel a strange sensation as you are magically transported.\n", "green")
@@ -543,6 +543,7 @@ commands = {
     'up': [up_command],
     'down': [down_command],
     'goto': [goto_command],
+    'socials': [list_socials],
     'cmds' : [cmds_command],
     'test' : [test_command],
     # Add more commands here...
@@ -570,7 +571,8 @@ def handle_player(player, msg):
         'l': 'look',
         'i': 'inventory',
         'j': 'scan',
-        'x': 'scan'
+        'x': 'scan',
+        'c': 'cast',
         # Add more shortcuts here...
     }
 
@@ -596,9 +598,18 @@ def handle_player(player, msg):
     # If the command exists, execute it
     if command_func:
         command_func(player, argument)
+        return
     else:
-        send_message(player, "I'm sorry, I don't understand you.\n")
-        
+        social_check = handle_social(player, command, argument)
+        if social_check:
+            return
+        else:   
+            send_message(player, "I'm sorry, I don't understand you.\n")
+            return
+    
+    
+    # could seperate socials into a seperate function / search
+    # that way it can be handled as one function that searches through many lists of poses etc
         
         
 def move_player(player, old_room_vnum, new_room_vnum, msg_to_room=None, msg_to_player=None):

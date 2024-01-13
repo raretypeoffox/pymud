@@ -69,11 +69,11 @@ time_manager = TimeManager()
 imp_manager = ImpManager()
 
 def tick_loop():
-    for player in player_manager.get_players():
-        player.character.tick()
+    for player in player_manager.get_players(LoggedIn=True):
+        player.tick()
     
     for mob in mob_instance_manager.get_all_instances():
-        mob.character.tick()
+        mob.tick()
         
     player_manager.save_all_players()
     do_specials()

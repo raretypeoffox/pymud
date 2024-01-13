@@ -113,13 +113,13 @@ def first_to_upper(s):
 
 
 
-def check_flag(act_flags, flag):
+def check_flag(flags, flag):
     ''' Checks if a flag is set in a bitfield.'''
-    if not isinstance(act_flags, int) or not isinstance(flag, int):
-        raise ValueError("Both act_flags and flag must be integers.")
+    if not isinstance(flags, int) or not isinstance(flag, int):
+        raise ValueError("Both flags and flag must be integers.")
     if flag != 0 and ((flag & (flag - 1)) != 0):
         raise ValueError("Flag must be a power of 2.")
-    return bool(act_flags & flag)
+    return bool(flags & flag)
 
 def is_NPC(player):
     if player.character is None:

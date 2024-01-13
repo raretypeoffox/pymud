@@ -3,6 +3,8 @@ log.txt
 server_log.txt
 test.py
 *.db
+player_database.db
+user_database.db
 rob_problem_set_xp.py
 
 __pycache__/

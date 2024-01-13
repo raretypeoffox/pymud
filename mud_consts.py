@@ -47,7 +47,7 @@ Greeting = """
      ` ``
 
                 **** Welcome to Mystic Realms! ****
-                **** Based on MUDPy by Vagonuth ****
+                **** Based on PyMUD by Vagonuth ****
 
 """
            
@@ -177,6 +177,14 @@ EQ_SLOTS = {
 
 EXIT_NAMES = ["north", "east", "south", "west", "up", "down"]
 
+DIR_NORTH = 0
+DIR_EAST = 1
+DIR_SOUTH = 2
+DIR_WEST = 3
+DIR_UP = 4
+DIR_DOWN = 5
+
+
 #define ITEM_LIGHT		      1
 #define ITEM_SCROLL		      2
 #define ITEM_WAND		      3
@@ -216,12 +224,7 @@ OBJ_STATE_QUEST = 6  # For items that are quest items, will save (even if on gro
 OBJ_STATE_MAX = 7 # For checking if valid state, not a state itself (add new states above and increment max)
 
 
-DIR_NORTH = 0
-DIR_EAST = 1
-DIR_SOUTH = 2
-DIR_WEST = 3
-DIR_UP = 4
-DIR_DOWN = 5
+
 
 
 # Room flags

@@ -210,8 +210,11 @@ class PlayerManager:
     def get_player_by_socket(self, socket):
         return self.player_sockets.get(socket)        
         
-    def get_players(self):
-        return self.players
+    def get_players(self, LoggedIn=False):
+        if not LoggedIn:
+            return self.players
+        else:
+            return [player for player in self.players if player.loggedin]
 
     def get_player_by_name(self, name):
         for player in self.players:
@@ -381,12 +384,16 @@ class Player:
                 
         return msg
     
+    def tick(self):
+        self.character.tick(self.current_room)
+    
         
 class Character:
     def __init__(self, NPC=False):
         self.level = 1
         self.race = ""
         self.origin = ""
+        self.death_room = 3000
             
         self.NPC = NPC
         self.inventory = set() # set of object UUIDs
@@ -512,12 +519,17 @@ class Character:
         amount = round(amount)
         self.current_stamina = min(self.max_stamina, self.current_stamina + amount)
         
-    def tick(self):
+    def tick(self, room):
         # update spell lengths
         
         REGEN_HP_RATE = self.max_hitpoints / 4
         REGEN_MANA_RATE = self.max_mana / 4
         REGEN_STAMINA_RATE = self.max_stamina
+        
+        if room.is_haven():
+            REGEN_HP_RATE *= 2
+            REGEN_MANA_RATE *= 2
+            
         
         if self.position == "Sleep":
             self.regen_hp(REGEN_HP_RATE)
@@ -881,6 +893,9 @@ class Room:
         matches = [extended_description for extended_description in self.extended_descriptions if any(kw.startswith(keyword) for kw in extended_description["keywords"].split())]
         return process_search_output(number, matches)
     
+    def is_haven(self):
+        return check_flag(self.room_flags, mud_consts.ROOM_HAVEN)
+    
 
 
 class ResetMob:
@@ -1061,6 +1076,8 @@ class MobInstance:
     def get_damroll(self):
         return self.template.damdice_num, self.template.damdice_size, self.template.damdice_bonus
         
+    def tick(self):
+        self.character.tick(self.current_room)
         
 class ObjectInstanceManager:
     def __init__(self):
@@ -1190,8 +1207,11 @@ class ObjectInstance:
         
         if self.location_type == "room":
             self.location_instance.remove_object(self)
+        elif self.location_type == "mob":
+            if self.location_instance is not None:
+                self.location_instance.remove_inventory(self.uuid)
         else:
-            log_error(f"Object imp: object {self.vnum} {self.name} is not in a room")
+            log_error(f"Object imp: object {self.vnum} {self.name} is not in a room or on a mob: {self.location_type}")
             return
         
         object_db.delete_object(self.uuid)

@@ -37,8 +37,8 @@ def game_loop(server_socket):
         sockets = [server_socket] + [player.socket for player in player_manager.get_players()]
 
         # Use select to wait for data to be available on any socket
-        ready_to_read, _, _ = select.select(sockets, [], [])
-
+        ready_to_read, _, _ = select.select(sockets, [], [], 0)
+        
         # First, read all data
         player_data = {}
         for sock in ready_to_read:
@@ -99,7 +99,7 @@ def game_loop(server_socket):
                     else:
                         handle_client_login(player, command)
 
-        process_output(NewLineAtStart=False)
+        process_output()
 
         # Update game state
         update_game_state()
@@ -180,6 +180,7 @@ def update_game_state():
     
     combat_loop()
     process_output()
+    
     timed_events()
     process_output()
 

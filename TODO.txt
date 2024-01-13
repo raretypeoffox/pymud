@@ -1,3 +1,4 @@
 Fix how Equipment slots work
 Need to make 2. search across everything not just category at a time
 Should we build server side handling of wrap lines (eg room descriptions)
+Config for player settings (prompt, info etc)
