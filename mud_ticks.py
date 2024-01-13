@@ -1,10 +1,11 @@
+# mud_ticks.py
 
 import time
 import random
 
 from mud_comms import  player_manager, send_room_message
 from mud_objects import mob_instance_manager, room_manager, object_instance_manager, reset_manager
-from mud_shared import colourize, first_to_upper, log_error
+from mud_shared import colourize, first_to_upper, log_error, log_info
 from mud_handler import player_movement
 import mud_consts
 
@@ -92,10 +93,16 @@ def do_imp():
     if len(imp_manager.imp_list) > 0:
         for obj in imp_manager.imp_list:
             if obj is not None and obj.state == mud_consts.OBJ_STATE_DROPPED and obj.insured == None:
-                if obj.location_instance is None:
-                    log_error(f"Object {obj.name} has no location room instance but is ready to be imped")
+                if obj.location_type == 'room' and obj.location_instance is None:
+                    if obj.location_instance is None:
+                        log_error(f"Object {obj.name} has no location room instance but is ready to be imped (looking for room vnum {obj.location})")
+                        continue
+                    send_room_message(obj.location_instance, f"{first_to_upper(obj.name)} disappears in a puff of smoke!\n")
+                if obj.location_type == 'player':
+                    log_error(f"Object {obj.name} is attempting to be imp'd but is still on a player")
                     continue
-                send_room_message(obj.location_instance, f"{first_to_upper(obj.name)} disappears in a puff of smoke!\n")
+                if obj.location_type == 'mob':
+                    log_info(f"Object {obj.name} is on a mob and being imped")
                 obj.imp()
                 del obj
         imp_manager.imp_list.clear()
@@ -112,17 +119,17 @@ def do_specials():
     if time_manager.ticks_elapsed % TICKS_SPECIAL > 0:
         return
     
-    send_room_message(room_manager.get_room_by_vnum(3001), colourize("You hear the waves crashing against the shore.", "blue"))
-    send_room_message(room_manager.get_room_by_vnum(3008), colourize("A faint, echoing whisper seems to drift through the cave, as if the very walls are murmuring a secret to those who dare to listen closely.", "blue"))
-    send_room_message(room_manager.get_room_by_vnum(3105), colourize("Soft, melodic sounds of water gently babbling over smooth stones fill the air, creating a soothing, tranquil ambiance.", "blue"))
-    send_room_message(room_manager.get_room_by_vnum(3112), colourize("A low, rumbling grunt echoes through the gully, sending a shiver down your spine as it hints at the presence of a large creature nearby.", "red"))
+    send_room_message(room_manager.get_room_by_vnum(3001), colourize("You hear the waves crashing against the shore.\n", "blue"))
+    send_room_message(room_manager.get_room_by_vnum(3008), colourize("A faint, echoing whisper seems to drift through the cave, as if the very walls are murmuring a secret to those who dare to listen closely.\n", "blue"))
+    send_room_message(room_manager.get_room_by_vnum(3105), colourize("Soft, melodic sounds of water gently babbling over smooth stones fill the air, creating a soothing, tranquil ambiance.\n", "blue"))
+    send_room_message(room_manager.get_room_by_vnum(3112), colourize("A low, rumbling grunt echoes through the gully, sending a shiver down your spine as it hints at the presence of a large creature nearby.\n", "red"))
     
     if time_manager.ticks_elapsed % (TICKS_SPECIAL * 3) == 0:
-        send_room_message(room_manager.get_room_by_vnum(3103), colourize("A soft melody seems to drift through the leaves of the ancient oak, fading in and out like a whispered secret.", "blue"))
+        send_room_message(room_manager.get_room_by_vnum(3103), colourize("A soft melody seems to drift through the leaves of the ancient oak, fading in and out like a whispered secret.\n", "blue"))
     elif time_manager.ticks_elapsed % (TICKS_SPECIAL * 2) == 0:
-        send_room_message(room_manager.get_room_by_vnum(3103), colourize("For a moment, the wind through the ancient oak's branches carries a melody, harmonious and old as time itself.", "blue"))
+        send_room_message(room_manager.get_room_by_vnum(3103), colourize("For a moment, the wind through the ancient oak's branches carries a melody, harmonious and old as time itself.\n", "blue"))
     else:
-        send_room_message(room_manager.get_room_by_vnum(3103), colourize("The rustling of the ancient oak's leaves briefly harmonizes into a melodic tune, as if nature itself is singing a forgotten song.", "blue"))
+        send_room_message(room_manager.get_room_by_vnum(3103), colourize("The rustling of the ancient oak's leaves briefly harmonizes into a melodic tune, as if nature itself is singing a forgotten song.\n", "blue"))
     
 
     

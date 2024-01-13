@@ -2,6 +2,7 @@ import time
 
 from mud_objects import MobTemplate, Room, ResetMob, ResetObject, ObjectTemplate, MobInstance, ObjectInstance
 from mud_objects import room_manager, mob_manager, object_manager, reset_manager, mob_instance_manager, object_instance_manager
+from mud_shared import log_info, log_error
 
 ### Parsing functions
 
@@ -146,7 +147,10 @@ def parse_room(lines):
     offset+=2
     
     parse_line = lines[offset].split()
-    current_room.area_number, current_room.room_flags, current_room.sector_type = parse_line[0], parse_flags(parse_line[1]), parse_line[2]
+    try:
+        current_room.area_number, current_room.room_flags, current_room.sector_type = parse_line[0], parse_flags(parse_line[1]), parse_line[2]
+    except:
+        log_error(f"Error parsing room {current_room.name} {vnum} line {offset}: {lines[offset]} - missing room flags or sector type")
     offset+=1
     
     while lines[offset].startswith('S') == False:
@@ -157,9 +161,12 @@ def parse_room(lines):
             offset += offset_add
             door_keywords, offset_add = parse_multi_line(lines[offset:])
             offset += offset_add
-            door_locks, door_key, door_to_room = lines[offset].split()
+            try:
+                door_locks, door_key, door_to_room = lines[offset].split()
+            except:
+                log_error(f"Error parsing room {current_room.name} {vnum} line {offset}: {lines[offset]} - missing door info")
             offset += 1
-            current_room.add_door(door_dir, door_desc, door_keywords, int(door_locks), int(door_key), int(door_to_room))
+            current_room.add_door(door_dir, door_desc, door_keywords, int(door_locks), int(door_key), int(door_to_room)) 
         elif lines[offset].startswith('E'):
             offset += 1
             ex_desc_keywords, offset_add = parse_multi_line(lines[offset:])
@@ -316,11 +323,11 @@ def load_area_files_list(file_path):
 def build_world():
     start_time = time.time()
     print("Building world...")
-    area_list_path = 'new_world/area.lst'  # Update this path to your area.lst file location
+    area_list_path = 'world/area.lst'  # Update this path to your area.lst file location
     are_files = load_area_files_list(area_list_path)
 
     for are_file in are_files:
-        full_path = f'new_world/{are_file}'  # Update the path as necessary
+        full_path = f'world/{are_file}'  # Update the path as necessary
         print(f"\tLoading {full_path}...")
         parse_are_file(full_path)
     

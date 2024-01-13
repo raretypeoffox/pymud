@@ -192,16 +192,23 @@ object_db = ObjectDatabase('object_database.db')
 class PlayerManager:
     def __init__(self):
         self.players = []
+        self.player_sockets = {}   
+        
 
     def add_player(self, player):
         self.players.append(player)
+        self.player_sockets[player.socket] = player
 
     def remove_player(self, player):
         try:
             self.players.remove(player)
+            del self.player_sockets[player.socket]
             return True
         except ValueError:
             return False
+        
+    def get_player_by_socket(self, socket):
+        return self.player_sockets.get(socket)        
         
     def get_players(self):
         return self.players
@@ -297,8 +304,21 @@ class Player:
             new_room.add_player(self)
             self.current_room = new_room
             
-    def get_description(self):
-        return self.name + " " + self.get_title()
+    def get_keywords(self):
+        return [self.name.lower()]
+            
+    def get_description(self):        
+        description = []
+        description.append(self.name + " " + self.get_title() + "\n")
+        #equipped = self.equipment.get_string_equipped_items()
+        equipped = None
+        if equipped:
+            description.append("They are wearing:")
+            description.append(equipped)
+        if self.inventory:
+            description.append(self.get_inventory_description(player_name=self.name))
+
+        return "\n".join(description)
     
     def get_title(self):
         if self.title == "":
@@ -761,7 +781,7 @@ class Room:
                 else:
                     available_exits.append(exit_names[i] + " (locked)")
         
-        available_exits_str = ', '.join(available_exits)
+        available_exits_str = ' '.join(available_exits)
         return available_exits_str
     
     def choose_random_door(self, exclude_other_area=True):
@@ -993,6 +1013,9 @@ class MobInstance:
         self.inventory_list = {} # key: UUID, value: ObjectInstance (not saved)
         
         self.aggro_list = []
+        
+    def get_keywords(self):
+        return self.template.keywords.split()
 
     def set_room(self, room):
         self.current_room = room
@@ -1015,7 +1038,7 @@ class MobInstance:
         if self.inventory:
             description.append("You peek into their inventory and see:")
             for item in self.inventory_list.values():
-                description.append(f"\t{item.template.short_description}")
+                description.append(f"\t{item.name}")
 
         return "\n".join(description) + "\n"
         
@@ -1185,6 +1208,9 @@ class ObjectInstance:
             self.state = state
         else:
             log_error(f"Invalid state {state} (object {self.vnum} {self.name})")
+            
+    def get_keywords(self):
+        return self.template.keywords.split()
     
     def get_description(self):
         description = []

@@ -1,0 +1,129 @@
+#AREA	{ ALL  } Vagonuth Whipsperwood Hollow~
+
+
+#MOBILES
+
+#0
+
+#OBJECTS
+
+#0
+
+#ROOMS
+#3300
+Whisperwood Entrance~
+You stand before the mystical entrance to Whisperwood Hollow, a hidden sanctuary only revealed to those with a keen sense. Enveloped in an embracing canopy of ancient trees, the air here is tinged with a soft, fragrant mist. The path, carpeted with lush green moss, invites you deeper into the village's heart. Harmonious chimes dance in the breeze, merging with the distant melody of a flowing stream.
+~
+3300 1024 3
+D1
+You spot a path back to the Ancient Oak~
+~
+0 0 3103
+D3
+~
+~
+0 0 3301
+S
+#3301
+Village Center of Whisperwood~
+The heart of Whisperwood Hollow unfolds before you as a serene village square. This open clearing is surrounded by towering trees, their branches forming a natural dome overhead. At the center, a gracefully carved stone well, overgrown with ivy, serves as a communal gathering spot. Wooden walkways, lined with softly glowing lanterns, branch off in various directions, leading to the different parts of the village. The air is alive with the gentle buzz of village life, as druids and villagers move about, engaged in quiet conversation and daily tasks. The atmosphere is one of tranquil activity, a harmonious blend of nature and community.
+~
+3300 1024 3
+D1
+~
+~
+0 0 3300
+D2
+~
+~
+0 0 3302
+S
+#3302
+Whispering Trail~
+Just south of the village center, a narrow path known as the Whispering Trail weaves its way through the dense underbrush. This serene walkway is bordered by a variety of vibrant wildflowers, emitting a myriad of sweet fragrances that blend into the forest air. Tall, ancient trees line the path, their leaves rustling softly, as if sharing age-old secrets with those who pass by. Gentle beams of sunlight filter through the canopy, casting dappled patterns on the forest floor. This peaceful trail serves as a connector, guiding villagers and visitors alike to various hidden alcoves and essential structures within the heart of Whisperwood Hollow.
+~
+3300 1024 3
+D0
+~
+~
+0 0 3301
+D2
+~
+~
+0 0 3303
+S
+#3303
+The Crystal Spring~
+At the heart of Whisperwood Hollow lies a spring of clear, crystal water. The spring emerges from beneath an outcropping of rocks, pooling into a small, serene pond. The water is said to have healing properties, shimmering with a gentle, ethereal light. Villagers often gather here, filling their vessels and offering thanks to the spirits of nature.
+~
+3300 1026 3
+D0
+~
+~
+0 0 3302
+D1
+~
+~
+0 0 3304
+D2
+~
+~
+0 0 3306
+D3
+~
+~
+0 0 3305
+S
+#3304
+Shaman's Sacred Dwelling~
+Nestled between ancient oaks, this quaint hut exudes a sense of calm and knowledge. The air inside is filled with the aroma of incense and dried herbs that hang from the rafters. In the center, a low fire burns in a stone hearth, casting a warm glow on the earthen walls. This is the abode of the village Shaman, a wise healer and guardian of ancient lore.
+~
+3300 1024 3
+D3
+~
+~
+0 0 3303
+S
+#3305
+The Eldertree Council Chamber~
+This open clearing is circled by towering elder trees, their trunks wide and gnarled with age. In the center, a circle of stone seats is arranged, where the village council convenes. Sunlight filters through the dense canopy above, casting dappled shadows on the ground. The air here carries a weight of wisdom and age-old secrets.
+~
+3300 1024 3
+D1
+~
+~
+0 0 3303
+S
+#3306
+The Training Grove~
+This peaceful grove is where the druids of Whisperwood Hollow train and hone their skills. The ground is soft with layers of fallen leaves, and the air resonates with the sounds of nature. In the center, a circle of standing stones creates a sacred space for learning and meditation. The leaves rustle as novice healers practice their spells, their chants blending with the whispers of the wind through the trees.
+~
+3300 1024 3
+D0
+~
+~
+0 0 3303
+S
+
+
+
+#0
+
+#RESETS
+
+S
+
+
+
+#SHOPS
+
+0
+
+
+
+#SPECIALS
+
+S
+
+
+#$

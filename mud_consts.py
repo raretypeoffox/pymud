@@ -80,19 +80,9 @@ Please choose from one of the following races:
               and are capable of great feats of healing and protection.
 
 """
+
 # Race specific stats: str, dex, con, int, wis, cha, tnl, racials
 
-# Tried DND style but too high of variance between races
-# RACES = {
-#   'Cragkin': [17, 12, 16, 10, 10, 9, 1000, ['merge']],
-#   'Moonshades': [10, 17, 12, 13, 13, 14, 1000, ['nightvision', 'silent']],
-#   'Etherials': [14, 17, 10, 13, 13, 10, 1000, ['ethereal', 'hide']],
-#   'Starfolk': [8, 8, 12, 17, 16, 13, 1000, ['starlight', 'heal']],
-#   'Frostlings': [12, 10, 12, 15, 16, 11, 1000, ['blizzard', 'ice wall']],
-#   'Aurorans': [8, 8, 10, 16, 17, 12, 1000, ['holy light', 'holy shield']]
-# }
-
-# will try this instead: start with 10 in all stats, then add 3 to one, 2 to another, 1 to another
 RACES = {
   'Cragkin': [13, 11, 12, 10, 10, 10, 1000, ['merge']],
   'Moonshade': [10, 13, 11, 12, 10, 10, 1000, ['nightvision', 'silent']],
@@ -232,6 +222,19 @@ DIR_SOUTH = 2
 DIR_WEST = 3
 DIR_UP = 4
 DIR_DOWN = 5
+
+
+# Room flags
+
+ROOM_DARK = 1
+ROOM_HAVEN = 2
+ROOM_NO_MOB = 4
+ROOM_INDOORS =  8
+ROOM_PRIVATE = 512
+ROOM_SAFE = 1024
+ROOM_SOLITARY = 2048
+ROOM_PET_SHOP = 4096
+ROOM_NO_RECALL = 8192
 
 # Room sector flags
 SECT_INSIDE = 0

@@ -405,7 +405,7 @@ def look_command(player, argument):
         
         players_in_room = room.search_players(argument)
         if players_in_room is not None:
-            send_message(player, f"{players_in_room.get_description()}\n")
+            send_message(player, f"{players_in_room.get_description()}")
             return
         
         door = room.search_doors(argument)

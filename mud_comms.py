@@ -1,6 +1,7 @@
 # mud_comms.py
 
 import sys
+import socket
 
 # import local files
 import mud_password
@@ -77,17 +78,25 @@ def send_message(player, msg):
         return
     player.output_buffer += msg
     
-def process_output():
+def process_output(NewLineAtStart=True):
     for player in player_manager.get_players():
         if player.output_buffer:
             if player.loggedin:
-                player.output_buffer = "\n" + player.output_buffer
+                if NewLineAtStart:
+                    player.output_buffer = "\n" + player.output_buffer
                 player.output_buffer += player.character.get_prompt()
             try:
                 player.socket.sendall(player.output_buffer.encode('utf-8'))
             except (BrokenPipeError, OSError):
                 handle_disconnection(player)
-            player.output_buffer = ""
+            except socket.timeout:
+                log_error(f"Socket operation timed out for player {player.fd}")
+            except UnicodeEncodeError:
+                log_error(f"Failed to encode message for player {player.fd}")
+            except Exception as e:  # This will catch any other types of exceptions
+                log_error(f"Unexpected error while sending player output: {e}")
+            finally:
+                player.output_buffer = ""
               
 # Character login functions
     
@@ -216,13 +225,16 @@ def handle_disconnection(player, msg=""):
         return
     print(f"{player.fd}: Player {player.name} disconnected: {msg}")
     log_info(f"{player.name} disconnected: {msg}")
-    new_room_instance = room_manager.get_room_by_vnum(player.room_id)
-    new_room_instance.remove_player(player)   
+    player.current_room.remove_player(player)
     if player_manager.disconnect_player(player, msg) and player.name != None:
-       send_global_message(colourize(f"\n[INFO]: {player.name} has left the game.", "red")) 
+       send_global_message(colourize(f"\n[INFO]: {player.name} has left the game.\n", "red")) 
        send_room_message(player.current_room, colourize(f"\n{player.name} has left the game.", "green"), player)
-    player.socket.close()
-    
+    try:
+        player.socket.close()
+    except OSError:
+        log_error(f"Error when closing socket for player {player.name}")
+    except Exception as e:
+        log_error(f"Unexpected error when closing socket for player {player.name}: {e}")
         
 def handle_new_client(client_socket):
     player = Player(client_socket.fileno())

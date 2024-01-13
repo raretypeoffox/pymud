@@ -3,6 +3,7 @@
 import time
 import signal
 import socket
+import select
 
 VERSION = "0.0.1"
 
@@ -27,48 +28,153 @@ def start_server(port=4000):
     signal.signal(signal.SIGINT, shutdown_handler)
 
     game_loop(server_socket)
-           
-def game_loop(server_socket):
-    server_socket.settimeout(0.1)
-    
-    while True:
-        # Accept new connections
-        try:
-            client_sock, addr = server_socket.accept()
-            client_sock.setblocking(False)  # Set to non-blocking mode
-            log_info(f"Accepted connection from {addr}")
-            handle_new_client(client_sock)
-        except socket.timeout:
-            pass
 
-        # Handle incoming messages
-        for player in player_manager.get_players():
-            try:
-                data = player.socket.recv(1024)
-                if data:
-                    msg = data.decode('utf-8')
-                    commands = msg.split('\n')  # Split the message into commands
-                    for command in commands:
-                        command = command.strip()  # Remove leading/trailing whitespace
-                        if command:  # Ignore empty commands
-                            log_client_input(player, command)
-                            if player.loggedin:
-                                handle_player(player, command)
-                            else:
-                                handle_client_login(player, command)
-            except ConnectionAbortedError:
-                handle_disconnection(player, "Connection aborted")
-            except ConnectionResetError:
-                handle_disconnection(player, "Connection reset by peer")
-            except BlockingIOError:
-                pass # No data received
-        process_output()
+def game_loop(server_socket):
+
+    while True:
+        
+        # Rebuild the list of sockets to monitor at the start of each loop iteration
+        sockets = [server_socket] + [player.socket for player in player_manager.get_players()]
+
+        # Use select to wait for data to be available on any socket
+        ready_to_read, _, _ = select.select(sockets, [], [])
+
+        # First, read all data
+        player_data = {}
+        for sock in ready_to_read:
+            if sock is server_socket:
+                # If the server socket is ready to read, a new connection is available
+                try:
+                    client_sock, addr = server_socket.accept()
+                    client_sock.setblocking(False)  # Set to non-blocking mode
+                    log_info(f"Accepted connection from {addr}")
+                    handle_new_client(client_sock)
+                    sockets.append(client_sock)  # Add the new socket to the list
+                except OSError as e:
+                    log_error(f"OS error while accepting new connection: {e}")
+                except socket.error as e:
+                    log_error(f"Socket error while accepting new connection: {e}")
+                except Exception as e:  # This will catch any other types of exceptions
+                    log_error(f"Unexpected error while accepting new connection: {e}")
+            else:
+                # If a client socket is ready to read, data is available from the client
+                player = player_manager.get_player_by_socket(sock)
+                if player:
+                    try:
+                        data = sock.recv(1024)
+                        if data:
+                            msg = data.decode('utf-8')
+                            player_data[player] = msg.split('\n')  # Split the message into commands
+                    except ConnectionAbortedError:
+                        handle_disconnection(player, "Connection aborted")
+                        sockets.remove(sock)  # Remove the socket from the list
+                    except ConnectionResetError:
+                        handle_disconnection(player, "Connection reset by peer")
+                        sockets.remove(sock)  # Remove the socket from the list
+                    except BlockingIOError:
+                        pass # No data received
+                    except UnicodeDecodeError:
+                        log_error(f"Received invalid data from player {player.fd}")
+                    except socket.timeout:
+                        log_error(f"Socket operation timed out for player {player.fd}")
+                    except BrokenPipeError:
+                        handle_disconnection(player, "Broken pipe")
+                        sockets.remove(sock)  # Remove the socket from the list
+                    except OSError as e:
+                        log_error(f"OS error for player {player.fd}: {e}")
+                        sockets.remove(sock)  # Remove the socket from the list
+                    except socket.error as e:
+                        log_error(f"Socket error while accepting new connection: {e}")
+                    except Exception as e:  # This will catch any other types of exceptions
+                        log_error(f"Unexpected error while reading player input: {e}")
+
+        # Then, process all data
+        for player, commands in player_data.items():
+            for command in commands:
+                command = command.strip()  # Remove leading/trailing whitespace
+                if command:  # Ignore empty commands
+                    log_client_input(player, command)
+                    if player.loggedin:
+                        handle_player(player, command)
+                    else:
+                        handle_client_login(player, command)
+
+        process_output(NewLineAtStart=False)
 
         # Update game state
         update_game_state()
 
         # Sleep for a bit to control the loop's rate
         time.sleep(0.1)
+
+# def game_loop(server_socket):
+#     # Create a list of sockets to monitor
+#     sockets = [server_socket] + [player.socket for player in player_manager.get_players()]
+
+#     while True:
+#         # Use select to wait for data to be available on any socket
+#         ready_to_read, _, _ = select.select(sockets, [], [])
+
+#         for sock in ready_to_read:
+#             if sock is server_socket:
+#                 # If the server socket is ready to read, a new connection is available
+#                 try:
+#                     client_sock, addr = server_socket.accept()
+#                     client_sock.setblocking(False)  # Set to non-blocking mode
+#                     log_info(f"Accepted connection from {addr}")
+#                     handle_new_client(client_sock)
+#                     sockets.append(client_sock)  # Add the new socket to the list
+#                 except OSError as e:
+#                     log_error(f"OS error while accepting new connection: {e}")
+#                 except socket.error as e:
+#                     log_error(f"Socket error while accepting new connection: {e}")
+#             else:
+#                 # If a client socket is ready to read, data is available from the client
+#                 player = player_manager.get_player_by_socket(sock)
+#                 if player:
+#                     try:
+#                         data = sock.recv(1024)
+#                         if data:
+#                             msg = data.decode('utf-8')
+#                             commands = msg.split('\n')  # Split the message into commands
+#                             for command in commands:
+#                                 command = command.strip()  # Remove leading/trailing whitespace
+#                                 if command:  # Ignore empty commands
+#                                     log_client_input(player, command)
+#                                     if player.loggedin:
+#                                         handle_player(player, command)
+#                                     else:
+#                                         handle_client_login(player, command)
+#                     except ConnectionAbortedError:
+#                         handle_disconnection(player, "Connection aborted")
+#                         sockets.remove(sock)  # Remove the socket from the list
+#                     except ConnectionResetError:
+#                         handle_disconnection(player, "Connection reset by peer")
+#                         sockets.remove(sock)  # Remove the socket from the list
+#                     except BlockingIOError:
+#                         pass # No data received
+#                     except UnicodeDecodeError:
+#                         log_error(f"Received invalid data from player {player.fd}")
+#                     except socket.timeout:
+#                         log_error(f"Socket operation timed out for player {player.fd}")
+#                     except BrokenPipeError:
+#                         handle_disconnection(player, "Broken pipe")
+#                         sockets.remove(sock)  # Remove the socket from the list
+#                     except OSError as e:
+#                         log_error(f"OS error for player {player.fd}: {e}")
+#                         sockets.remove(sock)  # Remove the socket from the list
+#                     except socket.error as e:
+#                         log_error(f"Socket error while accepting new connection: {e}")
+
+#         process_output(NewLineAtStart=False)
+
+#         # Update game state
+#         update_game_state()
+
+#         # Sleep for a bit to control the loop's rate
+#         time.sleep(0.1)
+            
+
         
 def update_game_state():
     

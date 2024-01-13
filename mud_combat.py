@@ -1,4 +1,4 @@
-import time
+# mud_combat.py
 
 import mud_consts
 from mud_shared import log_info, log_error, dice_roll, random_percent, colourize, first_to_upper, report_mob_health
@@ -44,7 +44,7 @@ def process_victory(player, mob_level):
     gain_msg = player.character.gain_experience(xp)
     if gain_msg != "":
         # Level!
-        send_global_message(colourize(f"\n[INFO]: {player.name} has reached level {player.character.level}!", "red"), player)
+        send_global_message(colourize(f"\n[INFO]: {player.name} has reached level {player.character.level}!", "red"))
         send_message(player, "\n" + colourize(gain_msg,"cyan"))
         
 
