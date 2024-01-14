@@ -68,6 +68,9 @@ def deal_damage(attacker, defender, damage, msg, type=0):
     
     PC, NPC = return_PC_and_NPC(attacker, defender)
     
+    # dealing damage always starts combat, check to see if combat is already started
+    combat_start(attacker, defender)
+    
     # Apply damage to defender
     defender.character.apply_damage(damage)
     send_room_message_processing(attacker, defender, msg)
@@ -82,6 +85,8 @@ def deal_damage(attacker, defender, damage, msg, type=0):
             msg = colourize(f"{first_to_upper(defender.name)} is dead!!!\n", "yellow")
             send_room_message(PC.current_room, msg)
             process_victory(PC, mob_level)
+            # if we have more targets to fight, keep on going
+            combat_manager.set_next_target(attacker)
         elif attacker == NPC:
             process_PC_death(PC, NPC)
             return
@@ -159,6 +164,12 @@ def combat_round(combatant_one, combatant_two, type=0):
     multi_hit(combatant_one, combatant_two, type)
      
 
+def combat_start(combatant_one, combatant_two):
+    if combat_manager.is_in_combat_with(combatant_one, combatant_two) == False:
+        combat_manager.start_combat(combatant_one, combatant_two)
+    if combat_manager.is_in_combat_with(combatant_two, combatant_one) == False:
+        combat_manager.start_combat(combatant_two, combatant_one)
+
 def attempt_flee(combantant_one, combatant_two, random_door):
     
     # might need to balance flee_chance later on
@@ -166,10 +177,16 @@ def attempt_flee(combantant_one, combatant_two, random_door):
     
     if random_percent() < flee_chance:
         send_room_message(combantant_one.current_room, f"{combantant_one.name} flees {mud_consts.EXIT_NAMES[random_door]} in terror!\n", excluded_player=[combantant_one, combatant_two], excluded_msg=[f"You flee {mud_consts.EXIT_NAMES[random_door]} in terror!\n", f"{combantant_one.name} flees {mud_consts.EXIT_NAMES[random_door]} from you in terror!\n"]) 
-        combat_manager.end_combat(combantant_one, combatant_two)
-        combat_manager.end_combat(combatant_two, combantant_one)
-        if combatant_two.character.NPC is True:
-            combatant_two.aggro_list.add(combantant_one)
+        for character in combat_manager.all_targeting_character(combantant_one):
+            combat_manager.end_combat(combantant_one, character)
+            combat_manager.end_combat(character, combantant_one)
+            if character.character.NPC is True:
+                character.aggro_list.add(combantant_one)
+        
+        
+        # combat_manager.end_all_combat(combantant_one)
+        # if combatant_two.character.NPC is True:
+        #     combatant_two.aggro_list.add(combantant_one)
         combantant_one.move_to_room(room_manager.get_room_by_vnum(combantant_one.current_room.doors[random_door]["to_room"]))
         return True
     else:
@@ -181,8 +198,7 @@ def kill_mob(player, mob):
         send_message(player, "You are already in combat!\n")
         return
     send_message(player, f"You attack {mob.name}!\n")
-    combat_manager.start_combat(player, mob)
-    combat_manager.start_combat(mob, player)
+    combat_start(player, mob)
     combat_round(player, mob)
     if combat_manager.get_current_target(player):
         send_message(player, report_mob_health(combat_manager.get_current_target(player)))

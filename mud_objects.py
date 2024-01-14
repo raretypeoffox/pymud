@@ -78,6 +78,33 @@ class PlayerDatabase:
                 created, lastlogin = result
                 return datetime.strptime(created, '%Y-%m-%d %H:%M:%S.%f'), datetime.strptime(lastlogin, '%Y-%m-%d %H:%M:%S.%f')
 
+    def query_player(self, player_name, fields):
+        '''
+        Queries the player database for specific fields of a player.
+
+        Parameters:
+        player_name (str): The name of the player to query.
+        fields (list): A list of strings representing the fields to query.
+
+        Returns:
+        list: A list containing the values of the requested fields for the player, in the same order as the fields parameter.
+            Returns None if the player does not exist or if any of the requested fields do not exist.
+        '''
+        with self.lock:
+            try:
+                # Construct the SQL query
+                sql = 'SELECT {} FROM players WHERE LOWER(name) = LOWER(?)'.format(', '.join(fields))
+                self.cursor.execute(sql, (player_name.lower(),))
+
+                result = self.cursor.fetchone()
+                if result is None:
+                    return None
+                else:
+                    return list(result)
+            except sqlite3.OperationalError:
+                # This exception is raised if any of the requested fields do not exist
+                return None
+        
 class ObjectDatabase:
     def __init__(self, db_path):
         self.conn = sqlite3.connect(db_path)
@@ -227,7 +254,8 @@ class PlayerManager:
     def save_all_players(self):
         start_time = time.time()
         for player in self.players:
-            player_db.save_player(player)
+            if player.loggedin:
+                player_db.save_player(player)
         log_info(f"Player Manager: saved all players in {time.time() - start_time:.2f} seconds")
 
     def disconnect_player(self, player, msg=""):
@@ -754,6 +782,9 @@ class Door:
         
     def get_keywords(self):
         return self.keywords.split()
+    
+    def get_description(self):
+        return self.description
 
 class ExtendedDescription:
     def __init__(self, keywords, description):
@@ -762,6 +793,9 @@ class ExtendedDescription:
         
     def get_keywords(self):
         return self.keywords.split()
+    
+    def get_description(self):
+        return self.description
         
 class Room:
     def __init__(self, vnum):
@@ -845,14 +879,19 @@ class Room:
         
     def scan(self, player=None):
         msg = ""
+        mob_count_per_exit = {}
         for exit in self.doors:
             if self.doors[exit]["locks"] == 0:
+                mob_count_per_exit[exit] = 0
                 msg += f"{first_to_upper(mud_consts.EXIT_NAMES[exit]): <10}"
                 if self.doors[exit]["description"] != "":
                     msg += f"({self.doors[exit]["description"]})"
                 msg += "\n"
                 for mob in room_manager.get_room_by_vnum(self.doors[exit]["to_room"]).mob_list:
-                    msg += f"    {mob.template.short_desc}\n"
+                    msg += colourize(f"    {first_to_upper(mob.template.long_desc)}", "cyan")
+                    mob_count_per_exit[exit] += 1
+                if mob_count_per_exit[exit] == 0:
+                    msg += "    You see no one here.\n"
             else:
                 msg += f"{first_to_upper(mud_consts.EXIT_NAMES[exit]): <10} Locked\n"
         return msg
@@ -1365,18 +1404,37 @@ class CombatManager:
 
     def get_combat_targets(self, character):
         return self.combat_dict.get(character, set())
+    
+    def get_current_target(self, character):
+        return self.current_target.get(character)
+    
+    def get_next_target(self, character):
+        targets = self.get_combat_targets(character)
+        if targets:
+            return next(iter(targets))
+        else:
+            return None
+    
+    def set_next_target(self, character):
+        next_target = self.get_next_target(character)
+        if next_target is not None:
+            self.current_target[character] = next_target
+            return next_target
+        else:
+            return None
 
     def in_combat(self, character):
         return character in self.combat_dict and len(self.combat_dict[character]) > 0
 
-    def end_all_combat(self, character):
-        if character in self.combat_dict:
-            self.combat_dict[character] = set()
-        if character in self.current_target:
-            del self.current_target[character]
+    def all_targeting_character(self, character):
+        return [char for char, target in self.current_target.items() if target == character]
 
-    def get_current_target(self, character):
-        return self.current_target.get(character)
+    def end_combat_with_all(self, player):
+        for character in self.all_targeting_character(player):
+            self.end_combat(player, character)
+            self.end_combat(character, player)
+
+
     
     def get_characters_in_combat(self):
         return list(self.combat_dict.keys())

@@ -1,4 +1,15 @@
 Fix how Equipment slots work
-Need to make 2. search across everything not just category at a time
 Should we build server side handling of wrap lines (eg room descriptions)
 Config for player settings (prompt, info etc)
+
+
+Mandel list:
+- can't cast to open combat
++ names not auto capitalized
++ scan is ugly
+
+Things to think about:
+- should I use dataclasses?
+- should I change when password is saved in password db (ie only after character is created)
+- change login routine?
+

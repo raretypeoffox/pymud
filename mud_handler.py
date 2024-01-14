@@ -1,5 +1,6 @@
 # mud_handler.py
 from datetime import datetime
+import pickle
 
 import mud_consts
 from mud_comms import send_message, send_room_message, player_manager, handle_disconnection
@@ -52,7 +53,7 @@ def flee_command(player, argument):
         pass  
 
 def cast_command(player, argument):
-    do_cast(player)
+    do_cast(player, argument)
     
 def follow_command(player, argument):
     if player.character.is_awake() == False:
@@ -314,24 +315,34 @@ def last_command(player, argument):
         send_message(player, "You must specify a player name.\n")
         return
     
-    result = player_db.get_player_created_lastlogin(argument)
+    result = player_db.query_player(player.name, ["created", "lastlogin", "character"])
     if result is None:
-        send_message(player, f"No player with the name {argument} found.")
+        send_message(player, f"No player with the name {argument} found.\n")
+        return
+    
+    created, lastlogin, character = result
+    created = datetime.strptime(created, '%Y-%m-%d %H:%M:%S.%f')
+    lastlogin = datetime.strptime(lastlogin, '%Y-%m-%d %H:%M:%S.%f')
+    character = pickle.loads(character)
+    
+    today = datetime.now().date()
+    if created.date() == today:
+        formatted_created = "today"
     else:
-        created, lastlogin = result
-        today = datetime.now().date()
+        formatted_created = created.strftime("%B %d, %Y")
+        
+    if lastlogin.date() == today:
+        formatted_lastlogin = "today"
+    else:
+        formatted_lastlogin = lastlogin.strftime("%B %d, %Y")
+        
+    if hasattr(character, 'level') is False or hasattr(character, 'race') is False:
+        log_error(f"last_command: {argument} has no character level or race")
+    else:    
+        send_message(player, f"{first_to_upper(argument)} is a level {character.level} {character.race} ")
+        
+    send_message(player, f"created {formatted_created} and last logged in {formatted_lastlogin}\n")
 
-        if created.date() == today:
-            formatted_created = "today"
-        else:
-            formatted_created = created.strftime("%B %d, %Y")
-
-        if lastlogin.date() == today:
-            formatted_lastlogin = "today"
-        else:
-            formatted_lastlogin = lastlogin.strftime("%B %d, %Y")
-
-        send_message(player, f'Player was created {formatted_created} and last logged in {formatted_lastlogin}\n')
                    
 def quit_command(player, argument):
     handle_disconnection(player, "Goodbye! Hope to see you soon...\n")

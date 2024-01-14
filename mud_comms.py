@@ -72,7 +72,7 @@ def send_room_message(room, msg, excluded_player=None, excluded_msg=None):
                 if index < len(excluded_msg):
                     send_message(player, excluded_msg[index])
        
-def send_info_message(msg, InfoType="Info", colour="red"):
+def send_info_message(msg, InfoType="INFO", colour="red"):
     send_global_message(colourize(f"[{InfoType}]: {msg}\n", colour))
              
 def send_global_message(msg):
@@ -105,6 +105,15 @@ def process_output(NewLineAtStart=True):
                 player.output_buffer = ""
               
 # Character login functions
+
+def handle_new_client(client_socket):
+    player = Player(client_socket.fileno())
+    player.socket = client_socket
+    player_manager.add_player(player)
+
+    send_message(player, mud_consts.Greeting)
+    
+    send_message(player, "What name is your character known by? ")      
     
 def handle_client_login(player, msg):
     print("Handle_client_login", player.fd, ":", msg)
@@ -122,9 +131,13 @@ def handle_client_login(player, msg):
         handle_password_verification(player, msg)
 
 def handle_new_character(player, msg):
-    player.name = msg.strip()
+    player.name = first_to_upper(msg).strip()
     if player.name.isalpha() == False:
-        send_message(player, "Invalid name! Please choose a valid name: ")
+        send_message(player, "Invalid name! Please choose alpha characters only: ")
+        player.name = None
+        return
+    elif len(player.name) < 3:
+        send_message(player, "Name must be at least 3 characters long! Please choose a different name: ")
         player.name = None
         return
     stored_password = mud_password.load_password(player.name)
@@ -198,7 +211,6 @@ def handle_origin_set(player, msg):
         if mud_consts.ORIGINS[comp]:
             player.character.origin = mud_consts.ORIGINS[comp]
             player.awaiting_origin = False
-            player.save()
             finish_login(player, "Character created successfully!\n", f"New character created: {player.name}")
         else:
             send_message(player, "Invalid origin! Please choose a valid origin.\n")
@@ -208,11 +220,14 @@ def handle_origin_set(player, msg):
         send_message(player, mud_consts.ORIGIN_MSG)
         return
 
-def finish_login(player, msg, log_msg):
+def finish_login(player, msg, log_msg):    
     player.loggedin = True
     if player.awaiting_reconnect_confirmation is False:
         send_message(player, mud_consts.MOTD)
     player.load()
+    player.save()
+    if player.character.race == '':
+        log_error("finish_login(): why did a player make it here without a race?")
     room = room_manager.get_room_by_vnum(player.room_id)
     room.add_player(player)
     player.set_room(room)
@@ -231,7 +246,8 @@ def handle_disconnection(player, msg=""):
         return
     print(f"{player.fd}: Player {player.name} disconnected: {msg}")
     log_info(f"{player.name} disconnected: {msg}")
-    player.current_room.remove_player(player)
+    if player.current_room is not None:
+        player.current_room.remove_player(player)
     if player_manager.disconnect_player(player, msg) and player.name != None:
         send_info_message(f"{player.name} has left the game.")
         send_room_message(player.current_room, colourize(f"\n{player.name} has left the game.", "green"), player)
@@ -240,16 +256,7 @@ def handle_disconnection(player, msg=""):
     except OSError:
         log_error(f"Error when closing socket for player {player.name}")
     except Exception as e:
-        log_error(f"Unexpected error when closing socket for player {player.name}: {e}")
-        
-def handle_new_client(client_socket):
-    player = Player(client_socket.fileno())
-    player.socket = client_socket
-    player_manager.add_player(player)
-
-    send_message(player, mud_consts.Greeting)
-    
-    send_message(player, "What name is your character known by? ")            
+        log_error(f"Unexpected error when closing socket for player {player.name}: {e}")      
     
 def handle_shutdown(signum, frame):
     print("Shutting down...")

@@ -1,5 +1,6 @@
 # mud_shared.py
 
+import shlex
 import random
 import re
 from datetime import datetime
@@ -114,7 +115,19 @@ def first_to_upper(s):
 
 
 def check_flag(flags, flag):
-    ''' Checks if a flag is set in a bitfield.'''
+    '''
+    Checks if a specific flag is set in a bitfield.
+
+    This function performs a bitwise AND operation between the flags and the flag to check.
+    It raises a ValueError if either flags or flag is not an integer, or if flag is not a power of 2.
+
+    Parameters:
+    flags (int): The bitfield of flags.
+    flag (int): The specific flag to check. Must be a power of 2.
+
+    Returns:
+    bool: True if the flag is set in the bitfield, False otherwise.
+    '''
     if not isinstance(flags, int) or not isinstance(flag, int):
         raise ValueError("Both flags and flag must be integers.")
     if flag != 0 and ((flag & (flag - 1)) != 0):
@@ -125,6 +138,14 @@ def is_NPC(player):
     if player.character is None:
         return False
     elif player.character.NPC is True:
+        return True
+    else:
+        return False
+    
+def is_PC(player):
+    if player.character is None:
+        return False
+    elif player.character.NPC is False:
         return True
     else:
         return False
@@ -162,8 +183,34 @@ def process_search_output(number, matches):
         return None
     
 def search_items(items, keyword):
+    '''
+    Searches for items that match the given keyword.
+
+    This function processes the keyword to separate a number and the actual keyword if applicable.
+    It then creates a list of items that match the keyword, and returns the item corresponding to the number
+    if provided, or the first match if no number is provided.
+
+    Parameters:
+    items (set): A set of items, each of with have a method for get_keywords() that returns a list of keywords.
+    keyword (str): The keyword to search for. Can include a number followed by a dot at the start to specify a particular match.
+
+    Returns:
+    object: The item that matches the keyword and corresponds to the number if provided, or the first matchif no number is provided.
+            Returns None if no matches are found or if the number is greater than the number of matches.
+            
+    Common usage:
+    For search for players and mobs in the room:
+        target = search_items((player.current_room.get_players() | player.current_room.get_mobs()), argument)
+    
+    For searching for keywords (eg for look):
+        all_items = (room.get_players() | player.get_objects() | room.get_mobs() | room.get_objects() | room.get_doors() | room.get_extended_descriptions())
+        item = search_items(all_items, argument)
+    '''
+    if keyword == "":
+        return None
+    
     # Process the keyword
-    processed_keyword, number = process_keyword(keyword)
+    processed_keyword, number = process_keyword(keyword.lower())
 
     # Create a list of matches
     matches = [item for item in items if any(kw.startswith(processed_keyword) for kw in item.get_keywords())]
@@ -171,3 +218,36 @@ def search_items(items, keyword):
     # Process the search output
     return process_search_output(number, matches)
     
+def parse_argument(argument):
+    '''
+    Splits the input argument into two parts: the first argument and the remainder.
+
+    This function understands quotes and apostrophes, preserving the content inside them as a single token.
+    If the input argument is None or an empty string, both the first argument and the remainder are set to None.
+    The remainder is set to None if there are no additional arguments.
+
+    Parameters:
+    argument (str): The input string to be split. Can be None or an empty string.
+
+    Returns:
+    tuple: A tuple containing two elements. The first element is the first argument from the input string,
+           or None if the input is None or an empty string. The second element is the remainder of the input string,
+           or None if there are no additional arguments or if the input is None or an empty string.
+    '''
+    
+    if argument is None or argument == '':
+        return None, None
+    
+    # Split the argument into tokens
+    tokens = shlex.split(argument)
+
+    # The first token is the first argument
+    first = tokens[0] if tokens else None
+
+    # If there are more tokens, the rest of them form the remainder
+    remainder = ' '.join(tokens[1:]) if len(tokens) > 1 else None
+
+    first = first.lower()
+    remainder = remainder.lower() if remainder is not None else None
+
+    return first, remainder

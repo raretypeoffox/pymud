@@ -14,8 +14,15 @@ from mud_shared import log_info, log_error
 from mud_combat import combat_loop
 from mud_ticks import timed_events
 
+
+from mud_shared import log_msg
 def log_client_input(player, msg):
-    print(f"{player.fd}: Received: {msg.rstrip()}")              
+    print(f"{player.fd}: Received: {msg.rstrip()}")
+    # remove the below later on
+    if player.name:
+        log_msg(f"[PLAYER]: {player.name}): {msg.rstrip()}")
+    else:
+        log_msg(f"[PLAYER]: {player.fd}): {msg.rstrip()}")             
 
 def start_server(port=4000):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
