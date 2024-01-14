@@ -260,6 +260,9 @@ class Player:
         self.current_recall = 0
         self.character = Character()
         
+        self.group = None
+        self.follow = None
+        
         self.inventory = set() # set of object UUIDs (saved)
         self.inventory_list = {} # key: UUID, value: ObjectInstance (not saved)
         
@@ -355,11 +358,9 @@ class Player:
     def remove_inventory(self, obj_uuid):
         self.inventory.remove(obj_uuid)
         del self.inventory_list[obj_uuid]
-        
-    def search_objects(self, keyword):
-        keyword, number = process_keyword(keyword)
-        matches = [obj for obj in self.inventory_list.values() if any(kw.startswith(keyword) for kw in obj.template.keywords.split())]
-        return process_search_output(number, matches)
+    
+    def get_objects(self):
+        return set(self.inventory_list.values())
 
     def get_inventory_description(self, player_name=None):
         if player_name is None:
@@ -603,6 +604,18 @@ class Equipment:
         else:
             return None
 
+
+class Group:
+    def __init__(self, leader):
+        self.leader = leader
+        self.members = [leader]
+
+    def add_member(self, player):
+        self.members.append(player)
+
+    def remove_member(self, player):
+        self.members.remove(player)
+        
 # Note: managers are for managing the base templates, not the instances
 
 class MobManager:
@@ -730,7 +743,25 @@ class ObjectTemplate:
         
         self.max_hitpoints = 100 # in the future, can use this for object condition
     
+class Door:
+    def __init__(self, door_number, door_description, keywords, locks, key, to_room):
+        self.door_number = door_number
+        self.description = door_description
+        self.keywords = keywords
+        self.locks = locks
+        self.key = key
+        self.to_room = to_room
+        
+    def get_keywords(self):
+        return self.keywords.split()
 
+class ExtendedDescription:
+    def __init__(self, keywords, description):
+        self.keywords = keywords
+        self.description = description
+        
+    def get_keywords(self):
+        return self.keywords.split()
         
 class Room:
     def __init__(self, vnum):
@@ -748,6 +779,8 @@ class Room:
         self.mob_list = set()
         self.object_list = set()
         self.player_list = set()
+        self.door_list = set()
+        self.extended_descriptions_list = set()
 
     def add_door(self, door_number, door_description, keywords, locks, key, to_room):
         self.doors[door_number] = {
@@ -757,12 +790,14 @@ class Room:
             "key": key,
             "to_room": to_room
         }
+        self.door_list.add(Door(door_number, door_description, keywords, locks, key, to_room))
 
     def add_extended_description(self, keywords, description):
         self.extended_descriptions.append({
             "keywords": keywords,
             "description": description
         })
+        self.extended_descriptions_list.add(ExtendedDescription(keywords, description))
         
     def add_player(self, player):
         self.player_list.add(player)
@@ -828,6 +863,15 @@ class Room:
     def get_mobs(self):
         return self.mob_list
     
+    def get_objects(self):
+        return self.object_list
+    
+    def get_doors(self):
+        return self.door_list
+    
+    def get_extended_descriptions(self):
+        return self.extended_descriptions_list    
+    
     def get_player_names(self, excluded_player=None):
         player_names = []
         for player in self.player_list:
@@ -868,30 +912,6 @@ class Room:
             msg += f"  {count_str} {first_to_upper(name)}\n"
                 
         return msg
-    def search_mobs(self, keyword):
-        keyword, number = process_keyword(keyword)
-        matches = [mob for mob in self.mob_list if any(kw.startswith(keyword) for kw in mob.template.keywords.split())]
-        return process_search_output(number, matches)
-    
-    def search_players(self, keyword):
-        keyword, number = process_keyword(keyword)
-        matches = [player for player in self.player_list if player.name.lower().startswith(keyword)]
-        return process_search_output(number, matches)
-    
-    def search_objects(self, keyword):
-        keyword, number = process_keyword(keyword)
-        matches = [obj for obj in self.object_list if any(kw.startswith(keyword) for kw in obj.template.keywords.split())]
-        return process_search_output(number, matches)
-
-    def search_doors(self, keyword):
-        keyword, number = process_keyword(keyword)
-        matches = [door for door in self.doors if any(kw.startswith(keyword) for kw in self.doors[door]["keywords"].split())]
-        return process_search_output(number, matches)
-    
-    def search_extended_descriptions(self, keyword):
-        keyword, number = process_keyword(keyword)
-        matches = [extended_description for extended_description in self.extended_descriptions if any(kw.startswith(keyword) for kw in extended_description["keywords"].split())]
-        return process_search_output(number, matches)
     
     def is_haven(self):
         return check_flag(self.room_flags, mud_consts.ROOM_HAVEN)
@@ -1027,7 +1047,10 @@ class MobInstance:
         self.inventory = set() # set of object UUIDs (saved)
         self.inventory_list = {} # key: UUID, value: ObjectInstance (not saved)
         
-        self.aggro_list = []
+        self.group = None
+        self.follow = None
+        
+        self.aggro_list = set()
         
     def get_keywords(self):
         return self.template.keywords.split()
@@ -1078,6 +1101,11 @@ class MobInstance:
         
     def tick(self):
         self.character.tick(self.current_room)
+        
+        if random.uniform(0, 1) < 0.2 and self.aggro_list:
+            self.aggro_list.pop()
+            
+
         
 class ObjectInstanceManager:
     def __init__(self):

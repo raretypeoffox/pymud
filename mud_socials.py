@@ -3,8 +3,9 @@
 
 
 
-from mud_shared import first_to_upper, log_error, log_info
-from mud_comms import send_message, send_room_message, send_room_message_processing
+from mud_shared import first_to_upper, colourize, search_items
+from mud_comms import send_message, send_room_message
+from mud_objects import room_manager
 
 
 
@@ -180,7 +181,7 @@ SOCIALS = {
         "$A tips their hat to $D in a sign of respect."
     ],
     
-        'thank': [
+    'thank': [
         "You express your heartfelt thanks.",
         "$A expresses heartfelt thanks.",
         "You thank $D sincerely.",
@@ -266,15 +267,46 @@ SOCIALS = {
         "You shiver visibly next to $D.",
         "$A shivers visibly next to you.",
         "$A shivers visibly next to $D."
+    ],
+    
+    'salute': [
+        "You stand at attention and offer a crisp salute.",
+        "$A stands straight and salutes sharply.",
+        "You salute $D with respect and dignity.",
+        "$A salutes you, a gesture of respect and formality.",
+        "$A raises their hand in a salute to $D."
     ]
+
     
 }
 
+# Callbacks for socials that require special processing
 
+def sing_callback(player, argument):
+    if player.current_room.vnum == 3103:
+        msg = "\nThe Ancient Oak seems to listen intently as you sing. Its leaves rustle, creating a melody that harmonizes with your tune. With a final note, a verdant glow envelops you, and you are whisked away, finding yourself before the enchanting entrance of Whisperwood Hollow.\n"
+        msg_to_room = f"\nAs {player.name} sings to the Ancient Oak, a whirlwind of leaves and light envelops them, and in a blink, they vanish, leaving a faint echo of their song behind.\n"
+        msg = colourize(msg, "bright magenta")
+        msg_to_room = colourize(msg_to_room, "bright magenta")
+        
+        send_room_message(player.current_room, msg_to_room, excluded_player=player, excluded_msg=msg)
+        
+        if not hasattr(player.character, 'death_room'):
+            setattr(player.character, 'death_room', 3399)
+        elif player.character.death_room is None or player.character.death_room == 3000:
+            player.character.death_room = 3399
+        
+        player.move_to_room(room_manager.get_room_by_vnum(3300))
+        send_room_message(player.current_room, f"{player.name} appears in a whirlwind of leaves and light, their eyes wide with wonder.\n", excluded_player=player)
+    pass
+
+SOCIALS_CALLBACKS = {
+    'sing': sing_callback,
+}
 
 def process_message(msg, player_name="", target_name=""):
-    msg = msg.replace("$A", first_to_upper(player_name))
-    msg = msg.replace("$D", first_to_upper(target_name))
+    msg = msg.replace("$A", player_name)
+    msg = msg.replace("$D", target_name)
     return msg + "\n"
 
 
@@ -287,24 +319,24 @@ def handle_social(player, social, argument):
         msg_to_player = process_message(SOCIALS[social][0], player.name)
         msg_to_room = process_message(SOCIALS[social][1], player.name)
         send_room_message(player.current_room, msg_to_room, excluded_player=player, excluded_msg=msg_to_player)
-        return True
+        # return True
     else:
-        player_target = player.current_room.search_players(argument)
-        mob_target = player.current_room.search_mobs(argument)
-        if player_target is None and mob_target is None:
+        target = search_items((player.current_room.get_players() | player.current_room.get_mobs()), argument)
+        if target is not None:
+            msg_to_player = process_message(SOCIALS[social][2], player.name, target.name)
+            msg_to_target = process_message(SOCIALS[social][3], player.name, target.name)
+            msg_to_room = process_message(SOCIALS[social][4], player.name, target.name)
+            send_room_message(player.current_room, first_to_upper(msg_to_room), excluded_player=[player, target], excluded_msg=[first_to_upper(msg_to_player), first_to_upper(msg_to_target)])
+        else:
             send_message(player, "You can't find them!\n")
             return False
-        elif player_target is not None:
-            msg_to_player = process_message(SOCIALS[social][2], player.name, player_target.name)
-            msg_to_target = process_message(SOCIALS[social][3], player.name, player_target.name)
-            msg_to_room = process_message(SOCIALS[social][4], player.name, player_target.name)
-            send_room_message(player.current_room, msg_to_room, excluded_player=[player, player_target], excluded_msg=[msg_to_player, msg_to_target])
-            return True
-        elif mob_target is not None:
-            msg_to_player = process_message(SOCIALS[social][2], player.name, mob_target.name)
-            msg_to_room = process_message(SOCIALS[social][4], player.name, mob_target.name)
-            send_room_message(player.current_room, msg_to_room, excluded_player=player, excluded_msg=msg_to_player)
-            return True
+        
+    # Check if there's a callback for the social
+    if social in SOCIALS_CALLBACKS:
+        # Call the callback function
+        SOCIALS_CALLBACKS[social](player, argument)
+        
+    return True
         
 def list_socials(player, argument):
     send_message(player, "Available socials:\n")

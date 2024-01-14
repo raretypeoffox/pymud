@@ -86,6 +86,7 @@ def mini_tick_loop():
         if mob.template.check_if_move():
             door = mob.current_room.choose_random_door()
             player_movement(mob, door)
+ 
     
     
 def do_imp():

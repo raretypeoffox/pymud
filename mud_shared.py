@@ -161,3 +161,13 @@ def process_search_output(number, matches):
     else:
         return None
     
+def search_items(items, keyword):
+    # Process the keyword
+    processed_keyword, number = process_keyword(keyword)
+
+    # Create a list of matches
+    matches = [item for item in items if any(kw.startswith(processed_keyword) for kw in item.get_keywords())]
+
+    # Process the search output
+    return process_search_output(number, matches)
+    

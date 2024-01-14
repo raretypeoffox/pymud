@@ -3,7 +3,7 @@ from datetime import datetime
 
 import mud_consts
 from mud_comms import send_message, send_room_message, player_manager, handle_disconnection
-from mud_shared import colourize, is_NPC, report_mob_health, first_to_upper, log_error
+from mud_shared import colourize, is_NPC, report_mob_health, first_to_upper, log_error, search_items
 
 from mud_world import room_manager
 from mud_objects import player_db, combat_manager
@@ -21,7 +21,7 @@ def kill_command(player, argument):
         send_message(player, "You need to be standing first!\n")
         return 
     
-    mob = player.current_room.search_mobs(argument)
+    mob = search_items(player.current_room.get_mobs(), argument)
 
     if mob is None:
         send_message(player, "No mob with that name found.\n")
@@ -43,6 +43,7 @@ def flee_command(player, argument):
     
     if flee_success:
         # todo add to mob's aggro list
+        
         send_message(player, colourize(player.character.flee_xp_loss(), "red"))
         look_command(player, "")
     else:
@@ -52,6 +53,38 @@ def flee_command(player, argument):
 
 def cast_command(player, argument):
     do_cast(player)
+    
+def follow_command(player, argument):
+    if player.character.is_awake() == False:
+        send_message(player, "You are sleeping!\n")
+        return
+    
+    if argument == '':
+        send_message(player, "Follow who?\n")
+        return
+    
+    if argument == 'self':
+        if player.follow is None:
+            send_message(player, "You are already following yourself!\n")
+            return
+        else:
+            send_message(player, f"You no longer follow {player.follow.name}.\n")
+            player.follow = None
+            return
+
+    target = search_items((player.current_room.get_players() | player.current_room.get_mobs()), argument)
+    if target is not None:
+        if target.follow is not None:
+            send_message(player, f"{target.name} is already following someone.\n")
+            return
+        player.follow=target
+        send_message(player, f"You now follow {target.name}.\n")
+        return
+    else:
+        send_message(player, "There's no one here with that name.\n")
+        return
+        
+    
     
 def sleep_command(player, argument):
     current_position = player.character.get_position()
@@ -132,28 +165,20 @@ def give_command(player, argument):
         send_message(player, "Give what to whom?\n")
         return
     
-    player_in_room = player.current_room.search_players(argument[1])
-    mob_in_room = player.current_room.search_mobs(argument[1])
-    
-    if player_in_room is None and mob_in_room is None:
-        send_message(player, "There's no one here with that name.\n")
-        return
-    
-    object = player.search_objects(argument[0])
+    object = search_items(player.get_objects(), argument[0])
         
     if object is None:
         send_message(player, "No item with that name found.\n")
         return
     
-    if player_in_room:
-        send_message(player, f"You give {object.name} to {player_in_room.name}.\n")
-        send_message(player_in_room, f"{player.name} gives you {object.name}.\n")
-        send_room_message(player.current_room, f"{player.name} gives {object.name} to {player_in_room.name}.\n", excluded_player=[player, player_in_room])
-        object.give(player, player_in_room)
-    elif mob_in_room:
-        send_message(player, f"You give {object.name} to {mob_in_room.name}.\n")
-        send_room_message(player.current_room, f"{player.name} gives {object.name} to {mob_in_room.name}.\n", excluded_player=player)
-        object.give(player, mob_in_room)
+    target = search_items((player.current_room.get_players() | player.current_room.get_mobs()), argument[1])
+    
+    if target is not None:
+        send_room_message(player.current_room, f"{player.name} gives {object.name} to {target.name}.\n", excluded_player=player, excluded_msg=f"You give {object.name} to {target.name}.\n")
+        object.give(player, target)
+    else:
+        send_message(player, "There's no one here with that name.\n")
+        return
 
 
 def get_command(player, argument):
@@ -177,7 +202,7 @@ def get_command(player, argument):
                 get_object(player, object)
             return
 
-        object = player.current_room.search_objects(argument)
+        object = search_items(player.current_room.get_objects(), argument)
         
         if object is None:
             send_message(player, "No item with that name found.\n")
@@ -202,7 +227,7 @@ def drop_command(player, argument):
             drop_object(player, object)
         return
     
-    object = player.search_objects(argument)
+    object = search_items(player.get_objects(), argument)
     
     if object is None:
         send_message(player, "No object with that name found.\n")
@@ -391,46 +416,24 @@ def look_command(player, argument):
             if mob_names != '':
                 send_message(player, f"{mob_names}")
     else:
-        # bug: 2. only works within a group (ie will look at second mob but won't look at second object if one in room and one in inventory)) 
-        
-        mob = room.search_mobs(argument)
-        if mob is not None:
-            send_message(player, f"{mob.get_description()}\n")
-            send_message(player, report_mob_health(mob))
-            return
-        
-        object = room.search_objects(argument) 
-        if object is not None:
-            send_message(player, f"{object.get_description()}\n")
-            return
-        
-        players_in_room = room.search_players(argument)
-        if players_in_room is not None:
-            send_message(player, f"{players_in_room.get_description()}")
-            return
-        
-        door = room.search_doors(argument)
-        if door is not None:
-            send_message(player, f"{room.doors[door]["description"]}\n")
-            return
-        
-        extended_description = room.search_extended_descriptions(argument)
-        if extended_description is not None:
-            send_message(player, f"{extended_description["description"]}\n")
-            return
-        
-        inventory = player.search_objects(argument)
-        if inventory is not None:
-            send_message(player, f"{inventory.get_description()}\n")
+        # Create a list of all items in the room and in the player's inventory
+        all_items = (room.get_players() | player.get_objects() | room.get_mobs() | room.get_objects() | room.get_doors() | room.get_extended_descriptions())
+
+        # Search for the item in the list of all items
+        item = search_items(all_items, argument)
+        if item is not None:
+            send_message(player, f"{item.get_description()}\n")
             return
         
         send_message(player, colourize("You don't see that here.\n", "green"))     
 
 def scan_command(player, argument):
+    send_message(player, "You scan your surroundings...\n")
     scan_msg = player.current_room.scan(player)
-    print(scan_msg)
     if scan_msg != '':
         send_message(player, scan_msg)
+    else:
+        send_message(player, "... and you don't see anything.\n")
 
 
 def motd_command(player, argument):
@@ -456,6 +459,10 @@ def player_movement(player, direction):
             if room_instance.doors[direction]["locks"] == 0:
                 move_player(player, room_instance.vnum, room_instance.doors[direction]["to_room"], msg_to_room=colourize(f"{first_to_upper(player.name)} leaves to the {mud_consts.DIRECTIONS[direction]}.\n", "green"))
                 send_room_message(room_manager.get_room_by_vnum(room_instance.doors[direction]["to_room"]) , colourize(f"{first_to_upper(player.name)} arrives from the {mud_consts.DIRECTIONS_REVERSE[direction]}.\n", "green"), excluded_player=player)
+                for other_player in set(room_instance.get_players()):
+                    if other_player.follow == player:
+                        send_message(other_player, f"You follow {player.name} {mud_consts.DIRECTIONS[direction]}.\n")
+                        player_movement(other_player, direction)                            
             else:
                 send_message(player, "The door is locked.\n")
         else:
@@ -498,24 +505,14 @@ def down_command(player, argument):
 def cmds_command(player, argument):
     send_message(player, "Commands implemented:\n")
     for cmds in commands:
-        send_message(player, f"{cmds}\n")
-
-def test_command(player, argument):
-    send_message(player, "Test command.\n")
-    if argument == '':
-        return
-    mob = player.current_room.search_mobs(argument)
-    if mob is None:
-        send_message(player, "No mob with that name found.\n")
-    else:
-        send_message(player, f"Mob found: {mob.name}\n")
-                 
+        send_message(player, f"{cmds}\n")                 
 
 
 commands = {
     'kill': [kill_command],
     'flee': [flee_command],
     'cast': [cast_command],
+    'follow': [follow_command],
     'stand': [stand_command],
     'wake': [stand_command],
     'rest': [rest_command],
@@ -544,8 +541,7 @@ commands = {
     'down': [down_command],
     'goto': [goto_command],
     'socials': [list_socials],
-    'cmds' : [cmds_command],
-    'test' : [test_command],
+    'cmds' : [cmds_command]
     # Add more commands here...
 }
 
@@ -614,6 +610,18 @@ def handle_player(player, msg):
         
 def move_player(player, old_room_vnum, new_room_vnum, msg_to_room=None, msg_to_player=None):
     """move player from old_room to new_room, use room vnums"""
+    current_position = player.character.get_position()
+    if current_position == "Sleep" or current_position == "Rest":
+        return
+    
+    
     send_room_message(room_manager.get_room_by_vnum(old_room_vnum), msg_to_room, excluded_player=player, excluded_msg=msg_to_player)
     player.move_to_room(room_manager.get_room_by_vnum(new_room_vnum))
     look_command(player, "")
+    
+    # check for aggie mob
+    if player.character.NPC is not True:
+        for mob in player.current_room.get_mobs():
+            if player in mob.aggro_list:
+                send_message(player, colourize(f"\n{first_to_upper(mob.name)} glares and snarls!\n", "bright red"))
+                kill_mob(mob, player)

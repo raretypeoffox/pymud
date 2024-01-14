@@ -80,6 +80,7 @@ def deal_damage(attacker, defender, damage, msg, type=0):
             mob_level = NPC.character.level
             process_mob_death(PC, NPC)
             msg = colourize(f"{first_to_upper(defender.name)} is dead!!!\n", "yellow")
+            send_room_message(PC.current_room, msg)
             process_victory(PC, mob_level)
         elif attacker == NPC:
             process_PC_death(PC, NPC)
@@ -167,6 +168,8 @@ def attempt_flee(combantant_one, combatant_two, random_door):
         send_room_message(combantant_one.current_room, f"{combantant_one.name} flees {mud_consts.EXIT_NAMES[random_door]} in terror!\n", excluded_player=[combantant_one, combatant_two], excluded_msg=[f"You flee {mud_consts.EXIT_NAMES[random_door]} in terror!\n", f"{combantant_one.name} flees {mud_consts.EXIT_NAMES[random_door]} from you in terror!\n"]) 
         combat_manager.end_combat(combantant_one, combatant_two)
         combat_manager.end_combat(combatant_two, combantant_one)
+        if combatant_two.character.NPC is True:
+            combatant_two.aggro_list.add(combantant_one)
         combantant_one.move_to_room(room_manager.get_room_by_vnum(combantant_one.current_room.doors[random_door]["to_room"]))
         return True
     else:
