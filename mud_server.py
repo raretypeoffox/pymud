@@ -4,9 +4,6 @@ import time
 import signal
 import socket
 import select
-import telnetlib
-import errno
-import json
 
 VERSION = "0.0.1"
 
@@ -16,7 +13,8 @@ from mud_world import build_world, reset_world, build_objects
 from mud_shared import log_info, log_error
 from mud_combat import combat_loop
 from mud_ticks import timed_events
-from mud_objects import PlayerGMCP
+from mud_gmcp import handle_gmcp_negotiation, handle_gmcp_message, send_gmcp_messages
+from mud_gmcp import TELNET_WILL_SUPPORT, TELNET_WONT_SUPPORT, TELNET_GMCP_ASK_SUPPORTED, TELNET_GMCP_MSG_START
 
 
 from mud_shared import log_msg
@@ -40,65 +38,6 @@ def start_server(port=4000):
 
     game_loop(server_socket)
     
-def handle_telnet_negotiation(data, player):
-    # print("handle_telnet", str(data[:3]), telnetlib.IAC + telnetlib.WILL)
-    if data[:3] == telnetlib.IAC + telnetlib.WILL + b'\xc9':  # GMCP
-        player.gmcp = PlayerGMCP(player)
-        log_info(f"Player {player.fd} supports GMCP")
-    elif data[:3] == telnetlib.IAC + telnetlib.WONT + b'\xc9':  # GMCP
-        player.gmcp = None
-        log_info(f"Player {player.fd} does not support GMCP")
-        
-    if data[:3] == telnetlib.IAC + telnetlib.DO + b'\x01':  # Echo
-        player.echo = True
-        log_info(f"Player {player.fd} supports Echo")
-    elif data[:3] == telnetlib.IAC + telnetlib.DONT + b'\x01':  # Echo
-        player.echo = False
-        log_info(f"Player {player.fd} does not support Echo")
-        
-def handle_gmcp_message(data, player):
-    # Remove the IAC SB GMCP IAC SE bytes from the start and end of the message
-    gmcp_msg = data[3:-2]
-
-    # Decode the message from bytes to a string
-    gmcp_msg_str = gmcp_msg.decode('utf-8')
-
-    # Split the GMCP message into parts
-    parts = gmcp_msg_str.split(' ', 2)
-
-    # If the message contains data, parse it
-    if len(parts) == 3:
-        package, message, data_str = parts
-        data = json.loads(data_str)
-    elif len(parts) == 2:
-        package, message = parts
-        data = None
-    else:
-        package = parts[0]
-        message = None
-        data = None
-
-    # Perform the appropriate action based on the package and message
-    # ... not yet implemented ... TODO
-    
-    log_info(f"Received GMCP message from player {player.fd}: {package} {message} {data}")
-    
-        
-def send_gmcp_messages(players):
-    for player in players:
-        if player.gmcp:
-            while not player.gmcp.output_queue.empty():
-                try:
-                    # Get the next message from the queue
-                    msg = player.gmcp.output_queue.get()
-
-                    # Send the message
-                    player.socket.send(msg)
-                except (BrokenPipeError, OSError):
-                    handle_disconnection(player)
-                except Exception as e:  # This will catch any other types of exceptions
-                    log_error(f"Unexpected error while sending GMCP message: {e}")
-
 def game_loop(server_socket):
     while True:
         # Rebuild the list of sockets to monitor at the start of each loop iteration
@@ -118,7 +57,7 @@ def game_loop(server_socket):
                     log_info(f"Accepted connection from {addr}")
                     handle_new_client(client_sock)
                     sockets.append(client_sock)  # Add the new socket to the list
-                    client_sock.send(telnetlib.IAC + telnetlib.DO + b'\xc9')
+                    client_sock.send(TELNET_GMCP_ASK_SUPPORTED)
                 except OSError as e:
                     log_error(f"OS error while accepting new connection: {e}")
                 except socket.error as e:
@@ -133,9 +72,9 @@ def game_loop(server_socket):
                         data = sock.recv(1024)
                         # print(str(data))
                         if data:
-                            if data[:2] in [telnetlib.IAC + telnetlib.WILL, telnetlib.IAC + telnetlib.WONT]:
-                                handle_telnet_negotiation(data, player)
-                            elif data[:3] == telnetlib.IAC + telnetlib.SB + b'\xc9':
+                            if data[:2] in [TELNET_WILL_SUPPORT, TELNET_WONT_SUPPORT]:
+                                handle_gmcp_negotiation(data, player)
+                            elif data[:3] == TELNET_GMCP_MSG_START:
                                 handle_gmcp_message(data, player)
                             else:
                                 msg = data.decode('utf-8')
