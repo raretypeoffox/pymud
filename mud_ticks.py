@@ -73,7 +73,7 @@ def tick_loop():
     for player in player_manager.get_players(LoggedIn=True):
         player.tick()
     
-    for mob in mob_instance_manager.get_all_instances():
+    for mob in mob_instance_manager.get_all():
         mob.tick()
         
     player_manager.save_all_players()
@@ -84,7 +84,7 @@ def tick_loop():
 def mini_tick_loop():           
 
     # for non-sentinel mobs, small chance for them to move
-    for mob in mob_instance_manager.get_all_instances():
+    for mob in mob_instance_manager.get_all():
         if mob.template.check_if_move():
             door = mob.current_room.choose_random_door()
             player_movement(mob, door)
@@ -111,7 +111,7 @@ def do_imp():
         imp_manager.imp_list.clear()
     
     # then add all the items that will be imp'd in the next long_tick
-    for obj in object_instance_manager.get_all_instances():
+    for obj in object_instance_manager.get_all():
         if obj.state == ObjState.DROPPED and obj.insured == None:
             imp_manager.imp_list.add(obj)
     

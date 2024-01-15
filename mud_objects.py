@@ -250,10 +250,83 @@ class TemplateManager:
         for template in self.templates.values():
             msg += f"{template.vnum}: {template.name}\n"
         return msg
+
+class InstanceManager:
+    def __init__(self):
+        self.instances = {}  # vnum: [instance1, instance2, ...]
+
+    def add(self, instance):
+        if instance.vnum not in self.instances:
+            self.instances[instance.vnum] = []
+        self.instances[instance.vnum].append(instance)
+
+    def remove(self, instance):
+        if instance.vnum in self.instances:
+            self.instances[instance.vnum].remove(instance)
+            if not self.instances[instance.vnum]:
+                del self.instances[instance.vnum]
+
+    def get_all_by_vnum(self, vnum):
+        return self.instances.get(vnum, [])
+
+    def get(self, vnum, index):
+        return self.instances.get(vnum, [None])[index]
+
+    def get_all(self):
+        return [instance for instance_list in self.instances.values() for instance in instance_list]
+
+class MobInstanceManager(InstanceManager):
+    pass
+
+class ObjectInstanceManager(InstanceManager):
+    def __init__(self):
+        super().__init__()
+        self.uuids = {}  # uuid: object_instance
+
+    # ObjectInstanceManager specific methods go here
     
-room_manager = TemplateManager()
-mob_manager = TemplateManager()
-object_manager = TemplateManager()
+    # extend add to also add uuids
+    def add(self, object_instance):
+        super().add(object_instance)
+        self.uuids[object_instance.uuid] = object_instance
+        
+    def get_object_by_uuid(self, uuid):
+        return self.uuids.get(uuid)
+    
+    def load_objects(self):
+        object_instances = object_db.load_objects()
+        for object_instance in object_instances:
+            # self.add_object(object_instance)
+            object_instance.load()
+            
+    def save_objects(self):
+        objects = []
+        start_time = time.time()
+        for vnum in self.instances:
+            for obj in self.instances[vnum]:
+                if obj.state == ObjState.NORMAL: 
+                    # don't save objects that are in NORMAL
+                    continue
+                
+                # if an object's descriptions are the same as the template, set them to None
+                if obj.name == obj.template.short_description:
+                    obj.name = None
+                if obj.description == obj.template.long_description:
+                    obj.description = None
+                if obj.action_description == obj.template.action_description:
+                    obj.action_description = None
+                
+                objects.append(obj)
+                
+                if obj.name is None:
+                    obj.name = obj.template.short_description
+                if obj.description is None:
+                    obj.description = obj.template.long_description
+                if obj.action_description is None:
+                    obj.action_description = obj.template.action_description
+ 
+        object_db.save_objects(objects)
+        log_info(f"Saved {len(objects)} objects in {time.time() - start_time:.2f} seconds")
 
 class PlayerManager:
     def __init__(self):
@@ -308,8 +381,6 @@ class PlayerManager:
             
         # Remove the player from the list of connected players
         return self.remove_player(player)
-
-
 
 class Player:
     def __init__(self, fd):
@@ -1111,36 +1182,13 @@ class Resets:
     def process_repop_queue(self):
         self.process_mob_repop_queue()
         self.process_obj_repop_queue()
-
-class MobInstanceManager:
-    def __init__(self):
-        self.mob_instances = {} # vnum: [mob_instance1, mob_instance2, ...]
-    
-    def add_mob_instance(self, mob_instance):
-        if mob_instance.template.vnum not in self.mob_instances:
-            self.mob_instances[mob_instance.template.vnum] = []
-        self.mob_instances[mob_instance.template.vnum].append(mob_instance)
-
-    def remove_mob_instance(self, mob_instance):
-        if mob_instance.template.vnum in self.mob_instances:
-            self.mob_instances[mob_instance.template.vnum].remove(mob_instance)
-            if not self.mob_instances[mob_instance.template.vnum]:
-                del self.mob_instances[mob_instance.template.vnum]
-
-    def get_all_instances_by_vnum(self, vnum):
-        return self.mob_instances.get(vnum, [])
-
-    def get_instance_by_vnum(self, vnum, index):
-        return self.mob_instances.get(vnum, [None])[index]
-    
-    def get_all_instances(self):
-        return [mob for mob_list in self.mob_instances.values() for mob in mob_list]
-
+      
 class MobInstance:
     def __init__(self, template, mob_reset, room):
         self.template = template
         self.mob_reset = mob_reset
         self.name = self.template.short_desc
+        self.vnum = template.vnum
         self.current_room = None
         
         self.max_mana = 100
@@ -1158,7 +1206,7 @@ class MobInstance:
         self.character.level = template.level
         
         self.set_room(room)
-        mob_instance_manager.add_mob_instance(self)
+        mob_instance_manager.add(self)
         
         # todo
         self.equipment = Equipment()
@@ -1225,76 +1273,7 @@ class MobInstance:
             
 
         
-class ObjectInstanceManager:
-    def __init__(self):
-        self.object_instances = {} # vnum: [object_instance1, object_instance2, ...]
-        self.object_uuids = {} # uuid: object_instance
-        
-    def load_objects(self):
-        object_instances = object_db.load_objects()
-        for object_instance in object_instances:
-            # self.add_object(object_instance)
-            object_instance.load()
-            
-    def save_objects(self):
-        objects = []
-        start_time = time.time()
-        for vnum in self.object_instances:
-            for obj in self.object_instances[vnum]:
-                if obj.state == ObjState.NORMAL: 
-                    # don't save objects that are in NORMAL
-                    continue
-                
-                # if an object's descriptions are the same as the template, set them to None
-                if obj.name == obj.template.short_description:
-                    obj.name = None
-                if obj.description == obj.template.long_description:
-                    obj.description = None
-                if obj.action_description == obj.template.action_description:
-                    obj.action_description = None
-                
-                objects.append(obj)
-                
-                if obj.name is None:
-                    obj.name = obj.template.short_description
-                if obj.description is None:
-                    obj.description = obj.template.long_description
-                if obj.action_description is None:
-                    obj.action_description = obj.template.action_description
- 
-        object_db.save_objects(objects)
-        log_info(f"Saved {len(objects)} objects in {time.time() - start_time:.2f} seconds")
 
-    def add_object(self, object_instance):
-        # add to vnum dict
-        if object_instance.vnum not in self.object_instances:
-            self.object_instances[object_instance.vnum] = []
-        self.object_instances[object_instance.vnum].append(object_instance)
-        # add to uuid dict
-        self.object_uuids[object_instance.uuid] = object_instance
-        
-    def remove_object(self, object_instance):
-        #remove from vnum dict
-        if object_instance.vnum in self.object_instances:
-            self.object_instances[object_instance.vnum].remove(object_instance)
-            if not self.object_instances[object_instance.vnum]:
-                del self.object_instances[object_instance.vnum]
-        # remove from uuid dict
-        if object_instance.uuid in self.object_uuids:
-            del self.object_uuids[object_instance.uuid]
-    
-    def get_object_by_uuid(self, uuid):
-        return self.object_uuids.get(uuid)
-
-    def get_all_instances_by_vnum(self, vnum):
-        return self.object_instances.get(vnum, [])
-
-    def get_instance_by_vnum(self, vnum, index):
-        return self.object_instances.get(vnum, [None])[index]
-    
-    def get_all_instances(self):
-        return [obj for obj_list in self.object_instances.values() for obj in obj_list]
-    
 class ObjectInstance:
     def __init__(self, template, obj_reset=None, room=None, instance_uuid=None):
         self.template = template
@@ -1323,7 +1302,7 @@ class ObjectInstance:
             self.update_location("room", room.vnum, room)
             room.add_object(self)
         
-        object_instance_manager.add_object(self)
+        object_instance_manager.add(self)
                  
                     
     def save(self):
@@ -1364,7 +1343,7 @@ class ObjectInstance:
             return
         
         object_db.delete_object(self.uuid)
-        object_instance_manager.remove_object(self)      
+        object_instance_manager.remove(self)      
         
     
     def update_location(self, location_type, location, location_instance):
@@ -1531,7 +1510,9 @@ class CombatManager:
             return False
 
 
-
+room_manager = TemplateManager()
+mob_manager = TemplateManager()
+object_manager = TemplateManager()
 
 
 reset_manager = Resets()

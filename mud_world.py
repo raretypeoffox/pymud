@@ -353,14 +353,14 @@ def reset_world():
                             obj_template = object_manager.get(obj_vnum)
                             if obj_template is not None:
                                 obj = ObjectInstance(obj_template)
-                                object_instance_manager.add_object(obj)
+                                object_instance_manager.add(obj)
                                 mob.equipment.equip(slot, obj)
                 if mob_reset.inventory:
                     for obj_vnum in mob_reset.inventory:
                         obj_template = object_manager.get(obj_vnum)
                         if obj_template is not None:
                             obj = ObjectInstance(obj_template)
-                            object_instance_manager.add_object(obj)
+                            object_instance_manager.add(obj)
                             mob.add_item(obj)
    
             else:

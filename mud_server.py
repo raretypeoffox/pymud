@@ -8,7 +8,6 @@ import telnetlib
 import errno
 import json
 
-
 VERSION = "0.0.1"
 
 from mud_comms import handle_new_client, handle_shutdown, player_manager, handle_disconnection, handle_client_login, process_output

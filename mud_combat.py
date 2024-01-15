@@ -25,7 +25,7 @@ def process_mob_death(player, mob):
     reset_manager.add_to_mob_repop_queue(mob.mob_reset)
     # todo add corpse
     
-    mob_instance_manager.remove_mob_instance(mob)
+    mob_instance_manager.remove(mob)
     mob = None
 
 def process_victory(player, mob_level):
