@@ -4,6 +4,7 @@ import shlex
 import random
 import re
 from datetime import datetime
+from enum import Enum
 import mud_consts
 
 # Define some ANSI escape codes for colors
@@ -123,15 +124,22 @@ def check_flag(flags, flag):
 
     Parameters:
     flags (int): The bitfield of flags.
-    flag (int): The specific flag to check. Must be a power of 2.
+    flag (int or Enum): The specific flag to check. Must be a power of 2.
 
     Returns:
     bool: True if the flag is set in the bitfield, False otherwise.
     '''
-    if not isinstance(flags, int) or not isinstance(flag, int):
-        raise ValueError("Both flags and flag must be integers.")
+    if not isinstance(flags, int):
+        raise ValueError("Flags must be an integer.")
+    
+    if isinstance(flag, Enum):
+        flag = flag.value
+    elif not isinstance(flag, int):
+        raise ValueError("Flag must be an integer or an Enum member.")
+    
     if flag != 0 and ((flag & (flag - 1)) != 0):
-        raise ValueError("Flag must be a power of 2.")
+        raise ValueError("Flag value must be a power of 2.")
+    
     return bool(flags & flag)
 
 def is_NPC(player):

@@ -380,9 +380,6 @@ def reset_world():
                         add_obj = False
                 if add_obj:
                     obj = ObjectInstance(obj_template, obj_reset, room)
-                    # object_instance_manager.add_object(obj)
-                    # room.add_object(obj)
-                    # obj.update_location("room", room.vnum, room)
             else:
                 print(f"Room {obj_reset.room_vnum} not found")
         else:

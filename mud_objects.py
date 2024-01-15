@@ -10,9 +10,11 @@ import uuid
 import json
 import queue
 import telnetlib
+from enum import Enum
 
 from mud_shared import dice_roll, colourize, log_info, log_error, check_flag, first_to_upper, process_keyword, process_search_output
 import mud_consts
+from mud_consts import Exits, ObjState, MobActFlags, RoomFlags, RoomSectorType
 
 # May want to consider if JSON is a better format for storing data
 class PlayerDatabase:
@@ -140,7 +142,7 @@ class ObjectDatabase:
             obj.name,
             obj.description,
             obj.action_description,
-            obj.state,
+            obj.state.value,
             obj.insured,
             obj.location,
             obj.location_type,
@@ -156,7 +158,7 @@ class ObjectDatabase:
             log_error("Object DB Error: Database connection is not open")
             return
 
-        data = [(str(obj.uuid), obj.vnum, obj.name, obj.description, obj.action_description, obj.state, obj.insured, obj.location, obj.location_type, obj.max_hitpoints, obj.current_hitpoints, json.dumps(obj.enchantments)) for obj in objects]
+        data = [(str(obj.uuid), obj.vnum, obj.name, obj.description, obj.action_description, obj.state.value, obj.insured, obj.location, obj.location_type, obj.max_hitpoints, obj.current_hitpoints, json.dumps(obj.enchantments)) for obj in objects]
 
         self.cursor.executemany("""
             INSERT OR REPLACE INTO objects VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -189,7 +191,7 @@ class ObjectDatabase:
                 obj.description = row[3]
             if row[4] is not None:
                 obj.action_description = row[4]
-            obj.state = row[5]
+            obj.state = ObjState(row[5])
             obj.insured = row[6]
             obj.location = row[7]
             obj.location_type = row[8]
@@ -345,6 +347,7 @@ class Player:
             new_room.add_player(self)
             self.current_room = new_room
         self.update_GMCP_status()
+        self.update_GMCP_vitals()
         self.update_GMCP_room()
             
     def get_keywords(self):
@@ -484,7 +487,9 @@ class Player:
             'mp': self.character.current_mana,
             'maxmp': self.character.max_mana,
             'stamina': self.character.current_stamina,
-            'maxstamina': self.character.max_stamina
+            'maxstamina': self.character.max_stamina,
+            'tnl': self.character.tnl - self.character.xp,
+            'tnlmax': self.character.tnl
         }
         self.queue_gmcp_message("Char", "Vitals", vitals)
     
@@ -815,7 +820,7 @@ class MobTemplate:
         self.speed = 3
         
     def check_if_move(self):
-        if check_flag(self.act_flags, mud_consts.ACT_SENTINEL):
+        if check_flag(self.act_flags, MobActFlags.SENTINEL):
             return False # Sentinel mobs don't move
         
         if random.uniform(0, 1) < (0.01 * self.speed):
@@ -933,15 +938,14 @@ class Room:
         self.object_list.discard(obj)
         
     def get_exit_names(self):
-        exit_names = ["north", "east", "south", "west", "up", "down"]
         available_exits = []
         
-        for i in range(len(exit_names)):
+        for i in range(len(Exits)):
             if i in self.doors:
                 if self.doors[i]["locks"] == 0:
-                    available_exits.append(exit_names[i])
+                    available_exits.append(Exits.get_name_by_value(i))
                 else:
-                    available_exits.append(exit_names[i] + " (locked)")
+                    available_exits.append(Exits.get_name_by_value(i) + " (locked)")
         
         available_exits_str = ' '.join(available_exits)
         return available_exits_str
@@ -964,7 +968,7 @@ class Room:
         for exit in self.doors:
             if self.doors[exit]["locks"] == 0:
                 mob_count_per_exit[exit] = 0
-                msg += f"{first_to_upper(mud_consts.EXIT_NAMES[exit]): <10}"
+                msg += f"{first_to_upper(Exits.get_name_by_value(exit)): <10}"
                 if self.doors[exit]["description"] != "":
                     msg += f"({self.doors[exit]["description"]})"
                 msg += "\n"
@@ -974,7 +978,7 @@ class Room:
                 if mob_count_per_exit[exit] == 0:
                     msg += "    You see no one here.\n"
             else:
-                msg += f"{first_to_upper(mud_consts.EXIT_NAMES[exit]): <10} Locked\n"
+                msg += f"{first_to_upper(Exits.get_name_by_value(exit)): <10} Locked\n"
         return msg
     
     def get_players(self):
@@ -1034,18 +1038,16 @@ class Room:
         return msg
     
     def is_haven(self):
-        return check_flag(self.room_flags, mud_consts.ROOM_HAVEN)
+        return check_flag(self.room_flags, mud_consts.RoomFlags.HAVEN)
     
-    def get_GMCP_room_info(self):
-        exit_names = ["north", "east", "south", "west", "up", "down"]
-        
+    def get_GMCP_room_info(self):        
         door_status = {}
         for door in self.door_list:
-            door_status[exit_names[door.door_number]] = "O" if door.locks == 0 else "C"
+            door_status[Exits.get_name_by_value(door.door_number)] = "O" if door.locks == 0 else "C"
         
         room = {
             'details': {},
-            'environment': mud_consts.SECTOR_TYPES[self.sector_type],
+            'environment': RoomSectorType.get_name_by_value(self.sector_type),
             'exits': door_status,
             'name': self.name,
             'zone': self.area_number
@@ -1259,8 +1261,8 @@ class ObjectInstanceManager:
         start_time = time.time()
         for vnum in self.object_instances:
             for obj in self.object_instances[vnum]:
-                if obj.state == 0: 
-                    # don't save objects that are in OBJ_STATE_NORMAL
+                if obj.state == ObjState.NORMAL: 
+                    # don't save objects that are in NORMAL
                     continue
                 
                 # if an object's descriptions are the same as the template, set them to None
@@ -1322,7 +1324,7 @@ class ObjectInstance:
         self.description = self.template.long_description
         self.action_description = self.template.action_description
         
-        self.state = mud_consts.OBJ_STATE_NORMAL
+        self.state = ObjState.NORMAL
         self.insured = None # set to Player name if insured
         
         self.location = None
@@ -1388,7 +1390,7 @@ class ObjectInstance:
         self.location_instance = location_instance
         
     def update_state(self, state):
-        if 0 <= state < mud_consts.OBJ_STATE_MAX:
+        if isinstance(state, Enum) and 0 <= state.value < ObjState.MAX.value:
             self.state = state
         else:
             log_error(f"Invalid state {state} (object {self.vnum} {self.name})")
@@ -1411,17 +1413,17 @@ class ObjectInstance:
             log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is not in room {player.current_room.vnum}")
             return False
   
-        if self.state == mud_consts.OBJ_STATE_INVENTORY or self.state == mud_consts.OBJ_STATE_LOCKER or self.state == mud_consts.OBJ_STATE_EQUIPPED:
+        if self.state == ObjState.INVENTORY or self.state == ObjState.LOCKER or self.state == ObjState.EQUIPPED:
             log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
             return False
         
-        if self.state == mud_consts.OBJ_STATE_NORMAL:
+        if self.state == ObjState.NORMAL:
             # normal items need to reset on repop
             reset_manager.add_to_obj_repop_queue(self.obj_reset)
         
         player.current_room.remove_object(self)
         player.add_inventory(self.uuid)
-        self.update_state(mud_consts.OBJ_STATE_INVENTORY)
+        self.update_state(ObjState.INVENTORY)
         self.update_location("player", player.name, player)
         self.save()
         return True
@@ -1433,11 +1435,11 @@ class ObjectInstance:
             log_error(f"Object drop: object {self.vnum}, {self.name} not in {player.name} inventory")
             return False
         
-        if self.state == mud_consts.OBJ_STATE_LOCKER or self.state == mud_consts.OBJ_STATE_EQUIPPED:
-            log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
+        if self.state == ObjState.LOCKER or self.state == ObjState.EQUIPPED:
+            log_error(f"Object drop: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
             return False
 
-        self.update_state(mud_consts.OBJ_STATE_DROPPED)
+        self.update_state(ObjState.DROPPED)
         
         player.current_room.add_object(self)
         player.remove_inventory(self.uuid)
@@ -1450,15 +1452,15 @@ class ObjectInstance:
             log_error(f"Object give: object {self.vnum}, {self.name} not in {player.name} inventory")
             return False
         
-        if self.state == mud_consts.OBJ_STATE_LOCKER or self.state == mud_consts.OBJ_STATE_EQUIPPED:
+        if self.state == ObjState.LOCKER or self.state == ObjState.EQUIPPED:
             log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
             return False
         
         target_is = "player"
         
         if target.character.NPC:
-            if self.state != mud_consts.OBJ_STATE_SPECIAL and self.state != mud_consts.OBJ_STATE_QUEST:
-                self.update_state(mud_consts.OBJ_STATE_DROPPED)
+            if self.state != ObjState.SPECIAL and self.state != ObjState.QUEST:
+                self.update_state(ObjState.DROPPED)
             target_is = "mob"
 
         self.update_location(target_is, target.name, target)    

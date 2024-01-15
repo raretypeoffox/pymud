@@ -8,6 +8,7 @@ from mud_objects import mob_instance_manager, room_manager, object_instance_mana
 from mud_shared import colourize, first_to_upper, log_error, log_info
 from mud_handler import player_movement
 import mud_consts
+from mud_consts import ObjState
 
 class TimeManager:
     def __init__(self):
@@ -94,7 +95,7 @@ def do_imp():
     # first imp all the items that were added in the previous long_tick
     if len(imp_manager.imp_list) > 0:
         for obj in imp_manager.imp_list:
-            if obj is not None and obj.state == mud_consts.OBJ_STATE_DROPPED and obj.insured == None:
+            if obj is not None and obj.state == ObjState.DROPPED and obj.insured == None:
                 if obj.location_type == 'room' and obj.location_instance is None:
                     if obj.location_instance is None:
                         log_error(f"Object {obj.name} has no location room instance but is ready to be imped (looking for room vnum {obj.location})")
@@ -111,7 +112,7 @@ def do_imp():
     
     # then add all the items that will be imp'd in the next long_tick
     for obj in object_instance_manager.get_all_instances():
-        if obj.state == mud_consts.OBJ_STATE_DROPPED and obj.insured == None:
+        if obj.state == ObjState.DROPPED and obj.insured == None:
             imp_manager.imp_list.add(obj)
     
     

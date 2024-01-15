@@ -1,5 +1,7 @@
 # mud_consts.py
 
+from enum import Enum
+
 SERVER_LOG = "server_log.txt"
 
 Greeting = """
@@ -175,15 +177,11 @@ EQ_SLOTS = {
   16384: "<held>"
 }
 
-EXIT_NAMES = ["north", "east", "south", "west", "up", "down"]
 
-DIR_NORTH = 0
-DIR_EAST = 1
-DIR_SOUTH = 2
-DIR_WEST = 3
-DIR_UP = 4
-DIR_DOWN = 5
 
+
+
+  
 
 #define ITEM_LIGHT		      1
 #define ITEM_SCROLL		      2
@@ -206,62 +204,60 @@ DIR_DOWN = 5
 #define ITEM_FOUNTAIN		     25
 #define ITEM_PILL		     26
 
-ACT_SENTINEL = 2		  # Stays in one room
-ACT_SCAVENGER = 4		  # Picks up objects
-ACT_UNUSED1 = 8		    # no longer used
-ACT_UNUSED2 = 16		  # no longer used
-ACT_AGGRESSIVE = 32		# Attacks PC's
-ACT_WIMPY = 128		  # Flees when hurt
-
-OBJ_STATE_NORMAL = 0  # For standard reset items, won't save
-OBJ_STATE_DROPPED = 1 # For items dropped on the ground, save but will imp after time
-OBJ_STATE_INVENTORY = 2  # For items in inventory, will save
-OBJ_STATE_LOCKER = 3  # For items in lockers, will save
-OBJ_STATE_EQUIPPED = 4  # For items equipped, will save
-OBJ_STATE_SPECIAL = 5  # For items that are special, will save (even if on ground) and not imp
-OBJ_STATE_QUEST = 6  # For items that are quest items, will save (even if on ground) and not imp
-
-OBJ_STATE_MAX = 7 # For checking if valid state, not a state itself (add new states above and increment max)
 
 
+class BaseEnum(Enum):
+    @classmethod
+    def get_name_by_value(cls, value):
+        for member in cls:
+            if member.value == value:
+                return member.name.lower()
+        return None
+      
+class Exits(BaseEnum):
+    NORTH = 0
+    EAST = 1
+    SOUTH = 2
+    WEST = 3
+    UP = 4
+    DOWN = 5
 
+class ObjState(BaseEnum):
+  NORMAL = 0  # For standard reset items, won't save
+  DROPPED = 1 # For items dropped on the ground, save but will imp after time
+  INVENTORY = 2  # For items in inventory, will save
+  LOCKER = 3  # For items in lockers, will save
+  EQUIPPED = 4  # For items equipped, will save
+  SPECIAL = 5  # For items that are special, will save (even if on ground) and not imp
+  QUEST = 6  # For items that are quest items, will save (even if on ground) and not imp
+  MAX = 7 # For checking if valid state, not a state itself (add new states above and increment max)  
 
+class MobActFlags(BaseEnum):
+    SENTINEL = 2
+    SCAVENGER = 4
+    AGGRESSIVE = 32
+    WIMPY = 128 
 
-# Room flags
-
-ROOM_DARK = 1
-ROOM_HAVEN = 2
-ROOM_NO_MOB = 4
-ROOM_INDOORS =  8
-ROOM_PRIVATE = 512
-ROOM_SAFE = 1024
-ROOM_SOLITARY = 2048
-ROOM_PET_SHOP = 4096
-ROOM_NO_RECALL = 8192
-
-# Room sector flags
-SECT_INSIDE = 0
-SECT_CITY = 1
-SECT_FIELD = 2
-SECT_FOREST = 3
-SECT_HILLS = 4
-SECT_MOUNTAIN = 5
-SECT_WATER_SWIM = 6
-SECT_WATER_NOSWIM = 7
-SECT_BEACH = 8
-SECT_AIR = 9
-SECT_DESERT = 10
-
-SECTOR_TYPES = [
-  "Inside",
-  "City",
-  "Field",
-  "Forest",
-  "Hills",
-  "Mountain",
-  "Water (swim)",
-  "Water (no swim)",
-  "Beach",
-  "Air",
-  "Desert"
-]
+class RoomFlags(BaseEnum):
+    DARK = 1
+    HAVEN = 2
+    NO_MOB = 4
+    INDOORS = 8
+    PRIVATE = 512
+    SAFE = 1024
+    SOLITARY = 2048
+    PET_SHOP = 4096
+    NO_RECALL = 8192
+  
+class RoomSectorType(BaseEnum):
+    INSIDE = 0
+    CITY = 1
+    FIELD = 2
+    FOREST = 3
+    HILLS = 4
+    MOUNTAIN = 5
+    WATER_SWIM = 6
+    WATER_NOSWIM = 7
+    BEACH = 8
+    AIR = 9
+    DESERT = 10

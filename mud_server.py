@@ -6,6 +6,7 @@ import socket
 import select
 import telnetlib
 import errno
+import json
 
 
 VERSION = "0.0.1"
@@ -54,6 +55,34 @@ def handle_telnet_negotiation(data, player):
     elif data[:3] == telnetlib.IAC + telnetlib.DONT + b'\x01':  # Echo
         player.echo = False
         log_info(f"Player {player.fd} does not support Echo")
+        
+def handle_gmcp_message(data, player):
+    # Remove the IAC SB GMCP IAC SE bytes from the start and end of the message
+    gmcp_msg = data[3:-2]
+
+    # Decode the message from bytes to a string
+    gmcp_msg_str = gmcp_msg.decode('utf-8')
+
+    # Split the GMCP message into parts
+    parts = gmcp_msg_str.split(' ', 2)
+
+    # If the message contains data, parse it
+    if len(parts) == 3:
+        package, message, data_str = parts
+        data = json.loads(data_str)
+    elif len(parts) == 2:
+        package, message = parts
+        data = None
+    else:
+        package = parts[0]
+        message = None
+        data = None
+
+    # Perform the appropriate action based on the package and message
+    # ... not yet implemented ... TODO
+    
+    log_info(f"Received GMCP message from player {player.fd}: {package} {message} {data}")
+    
         
 def send_gmcp_messages(players):
     for player in players:
@@ -106,6 +135,8 @@ def game_loop(server_socket):
                         if data:
                             if data[:2] in [telnetlib.IAC + telnetlib.WILL, telnetlib.IAC + telnetlib.WONT]:
                                 handle_telnet_negotiation(data, player)
+                            elif data[:3] == telnetlib.IAC + telnetlib.SB + b'\xc9':
+                                handle_gmcp_message(data, player)
                             else:
                                 msg = data.decode('utf-8')
                                 player_data[player] = msg.split('\n')  # Split the message into commands
@@ -130,7 +161,7 @@ def game_loop(server_socket):
                     except socket.error as e:
                         log_error(f"Socket error while accepting new connection: {e}")
                     except Exception as e:  # This will catch any other types of exceptions
-                        log_error(f"Unexpected error while reading player input: {e}")
+                        log_error(f"Unexpected error while reading player input: {e}\n{data}")
 
         # Then, process all data
         for player, commands in player_data.items():

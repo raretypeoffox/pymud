@@ -1,6 +1,7 @@
 # mud_combat.py
 
 import mud_consts
+from mud_consts import Exits
 from mud_shared import log_info, log_error, dice_roll, random_percent, colourize, first_to_upper, report_mob_health
 
 from mud_world import mob_instance_manager
@@ -176,7 +177,7 @@ def attempt_flee(combantant_one, combatant_two, random_door):
     flee_chance = 0.75 + (combantant_one.character.dex - combatant_two.character.dex) + (combantant_one.character.wis - 10)
     
     if random_percent() < flee_chance:
-        send_room_message(combantant_one.current_room, f"{combantant_one.name} flees {mud_consts.EXIT_NAMES[random_door]} in terror!\n", excluded_player=[combantant_one, combatant_two], excluded_msg=[f"You flee {mud_consts.EXIT_NAMES[random_door]} in terror!\n", f"{combantant_one.name} flees {mud_consts.EXIT_NAMES[random_door]} from you in terror!\n"]) 
+        send_room_message(combantant_one.current_room, f"{combantant_one.name} flees {Exits.get_name_by_value(random_door)} in terror!\n", excluded_player=[combantant_one, combatant_two], excluded_msg=[f"You flee {Exits.get_name_by_value(random_door)} in terror!\n", f"{combantant_one.name} flees {Exits.get_name_by_value(random_door)} from you in terror!\n"]) 
         for character in combat_manager.all_targeting_character(combantant_one):
             combat_manager.end_combat(combantant_one, character)
             combat_manager.end_combat(character, combantant_one)
@@ -221,6 +222,8 @@ def combat_loop():
             continue
         if combatant.character.NPC is False:
             send_message(combatant, report_mob_health(combat_manager.get_current_target(combatant)))
+            combatant.update_GMCP_status()
+            combatant.update_GMCP_vitals()
 
 
     
