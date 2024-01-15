@@ -3,14 +3,12 @@
 import sys
 import socket
 import json
+import queue
 import telnetlib
 
 # import local files
 import mud_password
 import mud_consts
-
-
-
 
 from mud_objects import Player, PlayerManager
 from mud_world import room_manager

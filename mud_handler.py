@@ -558,7 +558,7 @@ def cmds_command(player, argument):
         send_message(player, f"{cmds}\n")                 
 
 def test_command(player, argument):
-    send_message(player, f"GMCP: {str(player.gmcp)} Echo: {str(player.echo)}\n")
+    pass
 
 commands = {
     'cast': [cast_command],

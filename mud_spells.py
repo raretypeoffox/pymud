@@ -16,7 +16,7 @@ def spell_magic_missile(caster, target, spell):
     
     num_dice = 4 + (caster.character.int - 10)
     dam_dice = 3 + sublevel
-    damage = dice_roll(num_dice, dam_dice, caster.character.level + level)
+    damage = dice_roll(num_dice, dam_dice, level**2)
     
     spell_msg = colourize(f"$A utter$s the words 'magic missile'!\n", "yellow")
     spell_msg += colourize(f"$A point$s at $D and a small missile of energy shoots out, dealing {damage} damage!\n", "magenta")
@@ -30,7 +30,7 @@ def spell_burning_hands(caster, target, spell):
     num_dice = 2 + (caster.character.int - 10) // 2
     dam_dice = 2 + sublevel
     
-    damage = dice_roll(num_dice, dam_dice, caster.character.level + level)
+    damage = dice_roll(num_dice, dam_dice, level**2//2)
     
     spell_msg = colourize(f"$A utter$s the words 'burning hands'!\n", "yellow")
     

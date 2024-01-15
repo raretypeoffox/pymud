@@ -223,8 +223,9 @@ def combat_loop():
             continue
         if combatant.character.NPC is False:
             send_message(combatant, report_mob_health(combat_manager.get_current_target(combatant)))
-            combatant.update_GMCP_status()
-            combatant.update_GMCP_vitals()
+            if combatant.gmcp is not None:
+                combatant.gmcp.update_GMCP_status()
+                combatant.gmcp.update_GMCP_vitals()
 
 
     

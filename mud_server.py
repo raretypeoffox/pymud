@@ -16,6 +16,7 @@ from mud_world import build_world, reset_world, build_objects
 from mud_shared import log_info, log_error
 from mud_combat import combat_loop
 from mud_ticks import timed_events
+from mud_objects import PlayerGMCP
 
 
 from mud_shared import log_msg
@@ -42,10 +43,10 @@ def start_server(port=4000):
 def handle_telnet_negotiation(data, player):
     # print("handle_telnet", str(data[:3]), telnetlib.IAC + telnetlib.WILL)
     if data[:3] == telnetlib.IAC + telnetlib.WILL + b'\xc9':  # GMCP
-        player.gmcp = True
+        player.gmcp = PlayerGMCP(player)
         log_info(f"Player {player.fd} supports GMCP")
     elif data[:3] == telnetlib.IAC + telnetlib.WONT + b'\xc9':  # GMCP
-        player.gmcp = False
+        player.gmcp = None
         log_info(f"Player {player.fd} does not support GMCP")
         
     if data[:3] == telnetlib.IAC + telnetlib.DO + b'\x01':  # Echo
@@ -86,10 +87,10 @@ def handle_gmcp_message(data, player):
 def send_gmcp_messages(players):
     for player in players:
         if player.gmcp:
-            while not player.gmcp_output_queue.empty():
+            while not player.gmcp.output_queue.empty():
                 try:
                     # Get the next message from the queue
-                    msg = player.gmcp_output_queue.get()
+                    msg = player.gmcp.output_queue.get()
 
                     # Send the message
                     player.socket.send(msg)

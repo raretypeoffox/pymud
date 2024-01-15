@@ -17,7 +17,6 @@ import mud_consts
 from mud_consts import Exits, ObjState, MobActFlags, RoomFlags, RoomSectorType
 from mud_abilities import Abilities
 
-# May want to consider if JSON is a better format for storing data
 class PlayerDatabase:
     def __init__(self, db_name):
         self.connection = sqlite3.connect(db_name, check_same_thread=False)
@@ -382,20 +381,106 @@ class PlayerManager:
         # Remove the player from the list of connected players
         return self.remove_player(player)
 
-class Player:
-    def __init__(self, fd):
+class PlayerConnection:
+    def __init__(self, player, socket, fd):
+        self.player = player
+        self.socket = socket
         self.fd = fd
-        self.socket = None
         self.output_buffer = ""
-        self.gmcp_output_queue = queue.Queue()  # GMCP output queue
+        
+        self.echo = False
+        
         self.loggedin = False
         self.reconnect_prompt = False
         self.awaiting_reconnect_confirmation = False
         self.awaiting_race = False
         self.awaiting_origin = False
-        self.gmcp = False
-        self.echo = False
         
+class PlayerGMCP:
+    def __init__(self, player):
+        self.player = player
+        self.character = player.character
+        self.output_queue = queue.Queue()
+        self.gmcp = True
+        
+    def queue_message(self, package, message, data):
+        try:
+            data_str = json.dumps(data)
+            gmcp_msg = f"{package}.{message} {data_str}"
+            gmcp_msg_bytes = gmcp_msg.encode('utf-8')
+            telnet_cmd = telnetlib.IAC + telnetlib.SB + b'\xc9' + gmcp_msg_bytes + telnetlib.IAC + telnetlib.SE
+            self.output_queue.put(telnet_cmd)
+        except UnicodeEncodeError:
+            log_error(f"Failed to encode message for player {self.fd}")
+        except Exception as e:  # This will catch any other types of exceptions
+            log_error(f"Unexpected error while adding GMCP message to output queue: {e}")
+        
+    def update_GMCP_status(self):
+        if self.player.loggedin is False:
+            return
+        status = {
+            'ac': self.player.get_AC(),
+            'alignment': self.character.alignment,
+            'character_name': self.player.name,
+            'class': "",
+            'con': self.character.con,
+            'dex': self.character.dex,
+            'experience_tnl': self.character.tnl - self.character.xp,
+            'experience_tnl_max': self.character.tnl,
+            'gold': self.character.gold,
+            'health': self.character.current_hitpoints,
+            'health_max': self.character.max_hitpoints,
+            'hitroll': self.player.get_hitroll(),
+            'int': self.character.int,
+            'level': self.character.level,
+            'mana': self.character.current_mana,
+            'mana_max': self.character.max_mana,
+            # 'opponent_name'
+            'race': self.character.race,
+            # 'room_exits': self.current_room.get_exit_names(),
+            'room_name': self.player.current_room.name,
+            'str': self.character.str,
+            'wis': self.character.wis
+        }
+        self.queue_message("Char", "Status", status)
+    
+    def update_GMCP_vitals(self):
+        if self.player.loggedin is False:
+            return
+        vitals = {
+            'hp': self.character.current_hitpoints,
+            'maxhp': self.character.max_hitpoints,
+            'mp': self.character.current_mana,
+            'maxmp': self.character.max_mana,
+            'stamina': self.character.current_stamina,
+            'maxstamina': self.character.max_stamina,
+            'tnl': self.character.tnl - self.character.xp,
+            'tnlmax': self.character.tnl
+        }
+        self.queue_message("Char", "Vitals", vitals)
+    
+    def update_GMCP_room(self):
+        if self.player.loggedin is False:
+            return
+
+        self.queue_message("Room", "Info", self.player.current_room.get_GMCP_room_info())
+        
+    def tick(self):
+        self.update_GMCP_status()
+        self.update_GMCP_vitals()
+
+class Player:
+    def __init__(self, fd):
+        self.fd = fd
+        self.socket = None
+        self.output_buffer = ""
+        self.loggedin = False
+        self.reconnect_prompt = False
+        self.awaiting_reconnect_confirmation = False
+        self.awaiting_race = False
+        self.awaiting_origin = False
+        self.gmcp = None
+        self.echo = False      
         
         self.name = None
         self.room_id = 3001
@@ -452,9 +537,10 @@ class Player:
         if new_room is not None:
             new_room.add_player(self)
             self.current_room = new_room
-        self.update_GMCP_status()
-        self.update_GMCP_vitals()
-        self.update_GMCP_room()
+        if self.gmcp is not None:
+            self.gmcp.update_GMCP_status()
+            self.gmcp.update_GMCP_vitals()
+            self.gmcp.update_GMCP_room()
             
     def get_keywords(self):
         return [self.name.lower()]
@@ -533,82 +619,9 @@ class Player:
     
     def tick(self):
         self.character.tick(self.current_room)
-        self.update_GMCP_status()
-        self.update_GMCP_vitals()
-        
-    def queue_gmcp_message(self, package, message, data):
-        try:
-            # Convert the data to a JSON string
-            data_str = json.dumps(data)
+        if self.gmcp is not None:
+            self.gmcp.tick()
 
-            # Create the GMCP message
-            gmcp_msg = f"{package}.{message} {data_str}"
-
-            # Encode the GMCP message to bytes
-            gmcp_msg_bytes = gmcp_msg.encode('utf-8')
-
-            # Create the Telnet command
-            telnet_cmd = telnetlib.IAC + telnetlib.SB + b'\xc9' + gmcp_msg_bytes + telnetlib.IAC + telnetlib.SE
-
-            # Add the command to the player's GMCP output queue
-            self.gmcp_output_queue.put(telnet_cmd)
-        except UnicodeEncodeError:
-            log_error(f"Failed to encode message for player {self.fd}")
-        except Exception as e:  # This will catch any other types of exceptions
-            log_error(f"Unexpected error while adding GMCP message to output queue: {e}")
-        
-    def update_GMCP_status(self):
-        if self.loggedin is False or self.gmcp is False:
-            return
-        status = {
-            'ac': self.get_AC(),
-            'alignment': self.character.alignment,
-            'character_name': self.name,
-            'class': "",
-            'con': self.character.con,
-            'dex': self.character.dex,
-            'experience_tnl': self.character.tnl - self.character.xp,
-            'experience_tnl_max': self.character.tnl,
-            'gold': self.character.gold,
-            'health': self.character.current_hitpoints,
-            'health_max': self.character.max_hitpoints,
-            'hitroll': self.get_hitroll(),
-            'int': self.character.int,
-            'level': self.character.level,
-            'mana': self.character.current_mana,
-            'mana_max': self.character.max_mana,
-            # 'opponent_name'
-            'race': self.character.race,
-            # 'room_exits': self.current_room.get_exit_names(),
-            'room_name': self.current_room.name,
-            'str': self.character.str,
-            'wis': self.character.wis
-        }
-        self.queue_gmcp_message("Char", "Status", status)
-    
-    def update_GMCP_vitals(self):
-        if self.loggedin is False or self.gmcp is False:
-            return
-        vitals = {
-            'hp': self.character.current_hitpoints,
-            'maxhp': self.character.max_hitpoints,
-            'mp': self.character.current_mana,
-            'maxmp': self.character.max_mana,
-            'stamina': self.character.current_stamina,
-            'maxstamina': self.character.max_stamina,
-            'tnl': self.character.tnl - self.character.xp,
-            'tnlmax': self.character.tnl
-        }
-        self.queue_gmcp_message("Char", "Vitals", vitals)
-    
-    
-    def update_GMCP_room(self):
-        if self.loggedin is False or self.gmcp is False:
-            return
-
-        self.queue_gmcp_message("Room", "Info", self.current_room.get_GMCP_room_info())
-    
-        
 class Character:
     def __init__(self, NPC=False):
         self.level = 1
