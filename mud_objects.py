@@ -15,6 +15,7 @@ from enum import Enum
 from mud_shared import dice_roll, colourize, log_info, log_error, check_flag, first_to_upper, process_keyword, process_search_output
 import mud_consts
 from mud_consts import Exits, ObjState, MobActFlags, RoomFlags, RoomSectorType
+from mud_abilities import Abilities
 
 # May want to consider if JSON is a better format for storing data
 class PlayerDatabase:
@@ -427,6 +428,8 @@ class Player:
     
     def tick(self):
         self.character.tick(self.current_room)
+        self.update_GMCP_status()
+        self.update_GMCP_vitals()
         
     def queue_gmcp_message(self, package, message, data):
         try:
@@ -544,6 +547,7 @@ class Character:
         self.alignment = 0
         
         self.racials = []
+        self.abilities = Abilities()
    
     def get_prompt(self):
         c = colourize
@@ -1370,14 +1374,17 @@ class ObjectInstance:
         if self.insured is not None:
             log_error(f"Object imp: object {self.vnum} {self.name} is insured")
             return
-        
+
         if self.location_type == "room":
             self.location_instance.remove_object(self)
         elif self.location_type == "mob":
             if self.location_instance is not None:
                 self.location_instance.remove_inventory(self.uuid)
+        elif self.location_type == "player":
+            if self.location_instance is not None:
+                self.location_instance.remove_inventory(self.uuid)
         else:
-            log_error(f"Object imp: object {self.vnum} {self.name} is not in a room or on a mob: {self.location_type}")
+            log_error(f"Object imp: object {self.vnum} {self.name} is not in a known location: {self.location_type}")
             return
         
         object_db.delete_object(self.uuid)

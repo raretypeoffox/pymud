@@ -261,3 +261,6 @@ class RoomSectorType(BaseEnum):
     BEACH = 8
     AIR = 9
     DESERT = 10
+    
+    
+

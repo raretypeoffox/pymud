@@ -2,6 +2,7 @@
 # mud_spells.py
 
 from dataclasses import dataclass
+from enum import Enum
 
 from mud_comms import send_message
 from mud_shared import colourize, dice_roll, parse_argument, search_items, is_NPC, is_PC, log_error
@@ -11,9 +12,11 @@ from mud_objects import combat_manager
   
 def spell_magic_missile(caster, target, spell):
     
-    num_dice = 4 + (caster.character.int - 10)
+    level, sublevel = caster.character.abilities.get_level(spell.spell_name)
     
-    damage = dice_roll(num_dice, 4, caster.character.level)
+    num_dice = 4 + (caster.character.int - 10)
+    dam_dice = 3 + sublevel
+    damage = dice_roll(num_dice, dam_dice, caster.character.level + level)
     
     spell_msg = colourize(f"$A utter$s the words 'magic missile'!\n", "yellow")
     spell_msg += colourize(f"$A point$s at $D and a small missile of energy shoots out, dealing {damage} damage!\n", "magenta")
@@ -22,9 +25,12 @@ def spell_magic_missile(caster, target, spell):
     
 def spell_burning_hands(caster, target, spell):
     
-    num_dice = 2 + (caster.character.int - 10) // 2
+    level, sublevel = caster.character.abilities.get_level(spell.spell_name)
     
-    damage = dice_roll(num_dice, 4, caster.character.level)
+    num_dice = 2 + (caster.character.int - 10) // 2
+    dam_dice = 2 + sublevel
+    
+    damage = dice_roll(num_dice, dam_dice, caster.character.level + level)
     
     spell_msg = colourize(f"$A utter$s the words 'burning hands'!\n", "yellow")
     
@@ -32,13 +38,14 @@ def spell_burning_hands(caster, target, spell):
         spell_msg += colourize(f"$A point$s at $D and a small flame shoots out, dealing {damage} damage!\n", "red")
         deal_damage(caster, mob, damage, spell_msg)
         spell_msg = ""
-    
-TAR_IGNORE = 1  # Spell chooses its own targets.
-TAR_CHAR_OFFENSIVE = 2  # Spell is offensive (starts combat).
-TAR_CHAR_DEFENSIVE = 3  # Spell is defensive (any char is legal).
-TAR_CHAR_SELF = 4  # Spell is personal-effect only.
-TAR_OBJ_INV = 5  # Spell is used on an object.
 
+class TargetType(Enum):
+    IGNORE = 1 # Spell chooses its own targets.
+    CHAR_OFFENSIVE = 2 # Spell is offensive (starts combat).
+    CHAR_DEFENSIVE = 3 # Spell is defensive (any char is legal).
+    CHAR_SELF = 4 # Spell is personal-effect only.
+    OBJ_INV = 5 # Spell is used on an object.
+ 
 @dataclass
 class Spell:
     spell_name: str
@@ -53,8 +60,8 @@ class Spell:
     msg_spell_off: str = ""
 
 SPELLS = {
-    "magic missile": Spell("magic missile", spell_magic_missile, 1, TAR_CHAR_OFFENSIVE, True, False, 30, 5, "magic missile", ""),
-    "burning hands": Spell("burning hands", spell_burning_hands, 1, TAR_IGNORE, True, False, 30, 5, "burning hands", ""),
+    "magic missile": Spell("magic missile", spell_magic_missile, 1, TargetType.CHAR_OFFENSIVE, True, False, 30, 5, "magic missile", ""),
+    "burning hands": Spell("burning hands", spell_burning_hands, 1, TargetType.IGNORE, True, False, 30, 5, "burning hands", ""),
 }    
 
 # TODO: will be used to say the spell name and target
@@ -64,9 +71,9 @@ def say_spell(caster, spell_name, target):
 # returns the target of the spell based on the spell target type
 def do_cast_select_target(caster, spell_name, target_type, target_name, combat_target):
     
-    if target_type == TAR_CHAR_SELF:
+    if target_type == TargetType.CHAR_SELF:
         return caster
-    elif target_type == TAR_CHAR_OFFENSIVE:
+    elif target_type == TargetType.CHAR_OFFENSIVE:
         # In combat, no target: target = combat_target
         # otherwise, target = target_name
         # no target, return none
@@ -78,16 +85,16 @@ def do_cast_select_target(caster, spell_name, target_type, target_name, combat_t
             return combat_target
 
         return target
-    elif target_type == TAR_CHAR_DEFENSIVE:
+    elif target_type == TargetType.CHAR_DEFENSIVE:
         # if no target_name is provided, cast on ourselves
         if target_name is None:
             return caster
         
         return search_items((caster.current_room.get_players() | caster.current_room.get_mobs()), target_name)
 
-    elif target_type == TAR_OBJ_INV:
+    elif target_type == TargetType.OBJ_INV:
         return search_items(caster.get_objects(), target_name)
-    elif target_type == TAR_IGNORE:
+    elif target_type == TargetType.IGNORE:
         return None
     else:
         log_error(f"Unknown target type {target_type} for spell {spell_name}!")
@@ -123,7 +130,9 @@ def do_cast(caster, argument):
         send_message(caster, f"You've never heard of a {spell_name} spell!!\n")
         return
     
-    # TODO: skill check to see if the caster can cast the spell
+    if caster.character.abilities.has_ability(spell.spell_name) is False:
+        send_message(caster, f"You don't know how to cast {spell.spell_name}!\n")
+        return
     
     # returns None is not in combat
     combat_target = combat_manager.get_current_target(caster)
@@ -136,10 +145,11 @@ def do_cast(caster, argument):
     # TODO implement race mana cost modifiers
     if caster.character.current_mana < spell.mana_cost:
         send_message(caster, f"You don't have enough mana to cast {spell.spell_name}!\n")
+        return
         
     # find our target
     target = do_cast_select_target(caster, spell.spell_name, spell.target_type, target_name, combat_target)
-    if target is None and spell.target_type != TAR_IGNORE:
+    if target is None and spell.target_type != TargetType.IGNORE:
         send_message(caster, "Cast at who?\n")
         return None
     
@@ -149,7 +159,7 @@ def do_cast(caster, argument):
         return
     
     # if we're already in combat, disallow targetting others not in combat
-    # if spell.target_type == TAR_CHAR_OFFENSIVE and combat_manager.in_combat(caster) is True and combat_manager.is_in_combat_with(caster, target) == False:
+    # if spell.target_type == TargetType.CHAR_OFFENSIVE and combat_manager.in_combat(caster) is True and combat_manager.is_in_combat_with(caster, target) == False:
     #     send_message(caster, "Finish this fight first!\n")
     #     return
     
@@ -159,6 +169,7 @@ def do_cast(caster, argument):
 
     caster.character.current_mana -= spell.mana_cost
     spell.spell_func(caster, target, spell)
+    send_message(caster, caster.character.abilities.used_ability(spell.spell_name))
     
     
 # for reference: how diku / merc works
@@ -170,14 +181,14 @@ def do_cast(caster, argument):
 
 # {
 # "magic missile",	{  1, 37, 37, 37 },
-# spell_magic_missile,	TAR_CHAR_OFFENSIVE,	POS_FIGHTING,
+# spell_magic_missile,	TargetType.CHAR_OFFENSIVE,	POS_FIGHTING,
 # NULL,			SLOT(32),	15,	12,
 # "magic missile",	"!Magic Missile!"
 # },
 
 # {
 # "cure light",		{ 37,  1, 37, 37 },
-# spell_cure_light,	TAR_CHAR_DEFENSIVE,	POS_FIGHTING,
+# spell_cure_light,	TargetType.CHAR_DEFENSIVE,	POS_FIGHTING,
 # NULL,			SLOT(16),	10,	12,
 # "",			"!Cure Light!"
 # },

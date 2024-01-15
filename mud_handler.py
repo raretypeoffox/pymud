@@ -11,6 +11,7 @@ from mud_objects import player_db, combat_manager
 from mud_combat import kill_mob, attempt_flee
 from mud_spells import do_cast
 from mud_socials import handle_social, list_socials
+from mud_abilities import ScrollsAndSpellbooks, AbilityType
 
 def kill_command(player, argument):
     if argument == '':
@@ -54,6 +55,40 @@ def flee_command(player, argument):
 
 def cast_command(player, argument):
     do_cast(player, argument)
+    
+def study_command(player, argument):
+    if player.character.is_awake() == False:
+        send_message(player, "You are sleeping!\n")
+        return
+    
+    if argument == '':
+        send_message(player, player.character.abilities.list_spells())
+        return
+    
+    object = search_items(player.get_objects(), argument.lower())
+        
+    if object is None:
+        send_message(player, "No scroll or spellbook with that name found.\n")
+        return
+
+    
+    if object.vnum in ScrollsAndSpellbooks:
+        spell_name = ScrollsAndSpellbooks[object.vnum]
+        if player.character.abilities.has_ability(spell_name):
+            send_message(player, f"You already know the spell {spell_name}.\n")
+            return
+        else:
+            study_msg = player.character.abilities.learn_ability(spell_name, AbilityType.SPELL) + "\n"
+            send_message(player, colourize(study_msg, "bright magenta"))
+            send_message(player, f"With a poof of smoke, {object.name} disappears!\n")
+            object.imp()
+            
+            
+    else:
+        send_message(player, "You can't study that.\n")
+        return
+    
+    
     
 def follow_command(player, argument):
     if player.character.is_awake() == False:
@@ -439,6 +474,9 @@ def look_command(player, argument):
         send_message(player, colourize("You don't see that here.\n", "green"))     
 
 def scan_command(player, argument):
+    if player.character.is_awake() == False:
+        send_message(player, "You are sleeping!\n")
+        return
     send_message(player, "You scan your surroundings...\n")
     scan_msg = player.current_room.scan(player)
     if scan_msg != '':
@@ -522,40 +560,41 @@ def test_command(player, argument):
     send_message(player, f"GMCP: {str(player.gmcp)} Echo: {str(player.echo)}\n")
 
 commands = {
-    'kill': [kill_command],
-    'flee': [flee_command],
     'cast': [cast_command],
-    'follow': [follow_command],
-    'stand': [stand_command],
-    'wake': [stand_command],
-    'rest': [rest_command],
-    'sleep': [sleep_command],
-    'inventory' : [inventory_command],
-    'give': [give_command],
-    'get': [get_command],
-    'drop': [drop_command],
-    'say': [say_command],
     'chat' : [chat_command],
-    'who': [who_command],
-    'title':[title_command],
+    'cmds' : [cmds_command],
+    'drop': [drop_command],
+    'down': [down_command],
+    'east': [east_command],
+    'flee': [flee_command],
+    'follow': [follow_command],
+    'get': [get_command],
+    'give': [give_command],
+    'goto': [goto_command],
+    'inventory' : [inventory_command],
+    'kill': [kill_command],
     'last': [last_command],
-    'score': [score_command],
-    'recall': [recall_command],
-    'quit': [quit_command],
-    'save': [save_command],
     'look': [look_command],
-    'scan': [scan_command],
     'motd': [motd_command],
     'north': [north_command],
-    'east': [east_command],
-    'south': [south_command],
-    'west': [west_command],
-    'up': [up_command],
-    'down': [down_command],
-    'goto': [goto_command],
+    'quit': [quit_command],
+    'recall': [recall_command],
+    'rest': [rest_command],
+    'save': [save_command],
+    'say': [say_command],
+    'scan': [scan_command],
+    'score': [score_command],
+    'sleep': [sleep_command],
     'socials': [list_socials],
-    'cmds' : [cmds_command],
-    'test':[test_command]
+    'south': [south_command],
+    'stand': [stand_command],
+    'study': [study_command],
+    'test':[test_command],
+    'title':[title_command],
+    'up': [up_command],
+    'wake': [stand_command],
+    'west': [west_command],
+    'who': [who_command],
     # Add more commands here...
 }
 
@@ -580,9 +619,11 @@ def handle_player(player, msg):
         'd': 'down',
         'l': 'look',
         'i': 'inventory',
+        'c': 'cast',
+        'st': 'stand',
         'j': 'scan',
         'x': 'scan',
-        'c': 'cast',
+        
         # Add more shortcuts here...
     }
 
