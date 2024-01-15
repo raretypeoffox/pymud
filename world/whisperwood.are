@@ -2,6 +2,106 @@
 
 
 #MOBILES
+#3300
+wise shaman~
+a wise old shaman~
+A wise old shaman sits here, surrounded by ancient tomes and herbs.
+~
+The wise shaman, draped in robes adorned with symbols of nature, exudes an aura of ancient knowledge and deep understanding. Their eyes, bright and perceptive, seem to look right through you.
+~
+66 0 1000 S
+20 4 15 20d10+10 3d4+2
+0 0
+0 0 1
+
+#3301
+young druid apprentice~
+a young druid apprentice~
+A young druid apprentice tends to the gardens with a careful touch.
+~
+This apprentice, barely out of their teens, shows a natural talent for nurturing plants. Their hands gently tend to the flora, and their focused expression reflects a deep connection with nature.
+~
+64 0 1000 S
+15 4 15 15d10+10 3d4+2
+0 0
+0 0 1
+
+#3302
+herbalist~
+a herbalist~
+A skilled herbalist carefully mixes various herbs and plants.
+~
+The herbalist's table is a clutter of leaves, flowers, and roots, all being expertly sorted and mixed. Their skilled hands work with precision, creating remedies known only to the village.
+~
+64 0 1000 S
+15 4 15 15d10+10 3d4+2
+0 0
+0 0 1
+
+#3303
+village elder~
+a village elder~
+An elderly druid, wise and serene, watches over the village.
+~
+This venerable figure, with their long white hair and deep lines etched by time, holds an air of authority and wisdom. Their gaze, both kind and knowing, seems to take in everything around them.
+~
+66 0 1000 S
+20 4 15 20d10+10 3d4+2
+0 0
+0 0 1
+
+
+#3304
+guardian grove~
+a guardian of the grove~
+A guardian, armed and vigilant, stands watch at the village's edge.
+~
+Clad in natural armor that blends with the forest, this guardian's presence is both reassuring and formidable. They stand alert, eyes scanning the horizon for any signs of danger.
+~
+66 0 1000 S
+23 4 15 20d10+10 4d4+2
+0 0
+0 0 1
+
+
+#3305
+whispering healer~
+a whispering healer~
+Soft whispers fill the air as a healer converses with the plants, their voice barely louder than a breeze.
+~
+This healer, cloaked in garbs adorned with floral patterns, seems to be in constant, quiet dialogue with the surrounding flora. Their hands hover over the plants, channeling a subtle, life-giving energy. The occasional tender smile directed towards the Root Chamber betrays their deeper purpose, a silent custodian of rebirth and healing.
+~
+66 0 1000 S
+20 4 15 20d10+10 3d4+2
+0 0
+0 0 1
+
+
+#3306
+wise instructor~
+a wise instructor of the grove~
+An experienced druid instructor, with a kind but stern expression, oversees the training of novices.
+~
+Standing tall among the trainees, this instructor embodies the wisdom and discipline of the druidic path. Their eyes, sharp and observant, miss no detail as they guide the novices through complex healing spells and nature rituals. With a blend of sternness and warmth, they correct mistakes and encourage progress, their presence a pillar of strength and knowledge within the grove.
+~
+66 0 1000 S
+20 4 15 20d10+10 3d4+2
+0 0
+0 0 1
+
+#3307
+novice druid~
+a diligent novice druid~
+A young druid, clothed in simple robes, is absorbed in practicing their spells, occasionally pausing to scribble notes.
+~
+This novice druid, with a look of intense concentration, is deeply engaged in their training. They chant incantations under their breath, their hands glowing faintly with nascent magical energy. The notes and scrolls scattered around them suggest a studious and dedicated pursuit of the healing arts. Every so often, they glance at the more experienced druids, seeking to emulate their grace and power.
+~
+64 0 1000 S
+15 4 15 15d10+10 3d4+2
+0 0
+0 0 1
+
+
 
 #0
 
@@ -29,6 +129,10 @@ Village Center of Whisperwood~
 The heart of Whisperwood Hollow unfolds before you as a serene village square. This open clearing is surrounded by towering trees, their branches forming a natural dome overhead. At the center, a gracefully carved stone well, overgrown with ivy, serves as a communal gathering spot. Wooden walkways, lined with softly glowing lanterns, branch off in various directions, leading to the different parts of the village. The air is alive with the gentle buzz of village life, as druids and villagers move about, engaged in quiet conversation and daily tasks. The atmosphere is one of tranquil activity, a harmonious blend of nature and community.
 ~
 3300 1024 3
+D0
+~
+~
+0 0 3309
 D1
 ~
 ~
@@ -37,6 +141,10 @@ D2
 ~
 ~
 0 0 3302
+D3
+~
+~
+0 0 3303
 S
 #3302
 Whispering Trail~
@@ -119,6 +227,27 @@ D0
 0 0 3306
 S
 #3308
+The Herb Gatherer's Path~
+This narrow path winds through a verdant corner of the village, where the air is rich with the scent of herbs. Small huts line the trail, their gardens overflowing with medicinal plants. Druids, young and old, can be seen tending to the plants, carefully selecting herbs for their healing properties. The sound of gentle laughter and soft conversations fills the air, creating a sense of communal harmony.
+~
+3300 1024 3
+D1
+~
+~
+0 0 3301
+S
+#3309
+The Greenwalk~
+The Greenwalk is a lush, tree-lined avenue that leads away from the village centre, connecting the village to the surrounding forest. It's a place where villagers stroll to enjoy the beauty of nature, with benches placed under the shade of tall oaks and maples. The laughter of children playing hide-and-seek among the trees echoes through the air, while elders walk slowly, deep in conversation, appreciating the tranquility and natural beauty of their home.
+~
+3300 1024 3
+D2
+~
+~
+0 0 3301
+S
+
+#3399
 Garden's Root Chamber~
 Grogginess gives way to clarity as you awaken in a chamber formed by the intertwining roots of the Healer's Garden above. The air is damp and earthy, with tendrils of healing energy seeping from the roots into your being. You hear the faint rustle of leaves and the distant, melodic incantations of druids above, their voices weaving spells of restoration and life. Dappled light filters down through the root network, guiding you along a natural path that spirals gently upwards, back to the world of green and light.
 ~
@@ -132,7 +261,15 @@ S
 #0
 
 #RESETS
-
+M 0 3300 0 3304     (shaman)
+M 0 3301 0 3304     (apprentice)
+M 0 3302 0 3303     (herbalist)
+M 0 3303 0 3305     (elder)
+M 0 3304 0 3301     (guardian)
+M 0 3304 0 3302     (guardian)
+M 0 3305 0 3307     (healer)
+M 0 3306 0 3306     (instructor)
+M 0 3307 0 3306     (novice)
 S
 
 

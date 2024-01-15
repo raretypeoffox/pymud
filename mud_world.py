@@ -148,7 +148,9 @@ def parse_room(lines):
     
     parse_line = lines[offset].split()
     try:
-        current_room.area_number, current_room.room_flags, current_room.sector_type = parse_line[0], parse_flags(parse_line[1]), parse_line[2]
+        current_room.area_number = int(parse_line[0])
+        current_room.room_flags = parse_flags(parse_line[1])
+        current_room.sector_type = int(parse_line[2])
     except:
         log_error(f"Error parsing room {current_room.name} {vnum} line {offset}: {lines[offset]} - missing room flags or sector type")
     offset+=1

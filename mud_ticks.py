@@ -80,7 +80,8 @@ def tick_loop():
     
 
         
-def mini_tick_loop():
+def mini_tick_loop():           
+
     # for non-sentinel mobs, small chance for them to move
     for mob in mob_instance_manager.get_all_instances():
         if mob.template.check_if_move():

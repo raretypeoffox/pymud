@@ -4,7 +4,7 @@ Config for player settings (prompt, info etc)
 
 
 Mandel list:
-- can't cast to open combat
++ can't cast to open combat
 + names not auto capitalized
 + scan is ugly
 

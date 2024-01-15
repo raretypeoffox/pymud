@@ -518,6 +518,8 @@ def cmds_command(player, argument):
     for cmds in commands:
         send_message(player, f"{cmds}\n")                 
 
+def test_command(player, argument):
+    send_message(player, f"GMCP: {str(player.gmcp)} Echo: {str(player.echo)}\n")
 
 commands = {
     'kill': [kill_command],
@@ -552,7 +554,8 @@ commands = {
     'down': [down_command],
     'goto': [goto_command],
     'socials': [list_socials],
-    'cmds' : [cmds_command]
+    'cmds' : [cmds_command],
+    'test':[test_command]
     # Add more commands here...
 }
 

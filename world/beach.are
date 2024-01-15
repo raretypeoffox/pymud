@@ -125,7 +125,7 @@ Perhaps you should "study scroll"...~
 Sea's Embrace~
 You awaken engulfed by the sea's cold embrace, the thunderous sound of waves crashing nearby. Around you, the sea sprawls endlessly, its dark depths a stark contrast to the glimmering light of the sun above. The shore, a hazy line between sea and sky, seems both inviting and impossibly distant, a haven from the ceaseless motion of the water.
 ~
-3099 8192 0
+3099 8192 8
 D0
 The shore beckons from afar, a silhouette of safety against the relentless ocean.~
 ~
@@ -139,7 +139,7 @@ cool sea water gently laps at your feet, retreating back to reveal a sandy
 beach strewn with shells and seaweed. In the distance, seagulls caw as they 
 circle above the water's surface.
 ~
-3000 0 0
+3000 0 8
 D0
 ~
 ~
@@ -160,7 +160,7 @@ water. The wood creaks underfoot, telling tales of fishermen who once cast
 their nets here. At the end of the jetty, a great view opens up, showcasing 
 the vastness of the ocean and the horizon beyond.
 ~
-3000 0 0
+3000 0 8
 D0
 ~
 ~
@@ -177,7 +177,7 @@ Colorful fish dart between the corals, and the sun's rays filter through
 the water, creating a kaleidoscope of light. The gentle sway of the sea
 nurtures a sense of peace and awe.
 ~
-3000 0 0
+3000 0 8
 D3
 ~
 ~
@@ -195,7 +195,7 @@ whispering secrets of the sea. The shade provided by the palms
 offers a cool respite from the sun, and the scent of tropical 
 flowers lingers in the air.
 ~
-3000 0 0
+3000 0 8
 D1
 ~
 ~
@@ -218,7 +218,7 @@ endless waters that stretch out towards the horizon. To the north,
 a small, barely noticeable trail weaves its way through the underbrush, 
 inviting the curious to explore further inland. 
 ~
-3000 0 0
+3000 0 8
 D0
 A winding path towards the north, your curiosity makes you want to explore it.~
 winding path~
@@ -239,7 +239,7 @@ escape from the sea's constant roar. The sand here is warm and fine, inviting
 bare feet to tread softly. Small crabs scuttle across the beach, disappearing 
 into tiny holes in the sand.
 ~
-3000 0 0
+3000 0 8
 D2
 ~
 ~
@@ -257,7 +257,7 @@ tunnel, while the sounds of the ocean gradually fade, replaced by the rustling
 of leaves and occasional bird calls. The trail leads you north, away from the 
 cliff's edge.
 ~
-3006 0 0
+3006 0 8
 D0
 ~
 ~
@@ -274,7 +274,7 @@ from the cave's ceiling, creating a serene, if mysterious atmosphere. The walls
 are cool and slightly damp to the touch, and the cave narrows as it curves westward, 
 hinting at secrets hidden deeper within the earth. There is an ETCHing on the wall.
 ~
-3006 0 0
+3006 0 8
 D2
 ~
 ~
@@ -296,7 +296,7 @@ and filled with the scent of pine and earth. Sunlight filters through the dense 
 above, casting dappled shadows on the forest floor. The vegetation is dense, but a path 
 to the west is clear, inviting further exploration into the heart of this green haven.
 ~
-3006 0 0
+3006 0 3
 D1
 ~
 ~

@@ -251,3 +251,17 @@ SECT_WATER_NOSWIM = 7
 SECT_BEACH = 8
 SECT_AIR = 9
 SECT_DESERT = 10
+
+SECTOR_TYPES = [
+  "Inside",
+  "City",
+  "Field",
+  "Forest",
+  "Hills",
+  "Mountain",
+  "Water (swim)",
+  "Water (no swim)",
+  "Beach",
+  "Air",
+  "Desert"
+]

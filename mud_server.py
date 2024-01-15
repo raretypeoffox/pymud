@@ -4,6 +4,9 @@ import time
 import signal
 import socket
 import select
+import telnetlib
+import errno
+
 
 VERSION = "0.0.1"
 
@@ -35,17 +38,46 @@ def start_server(port=4000):
     signal.signal(signal.SIGINT, shutdown_handler)
 
     game_loop(server_socket)
+    
+def handle_telnet_negotiation(data, player):
+    # print("handle_telnet", str(data[:3]), telnetlib.IAC + telnetlib.WILL)
+    if data[:3] == telnetlib.IAC + telnetlib.WILL + b'\xc9':  # GMCP
+        player.gmcp = True
+        log_info(f"Player {player.fd} supports GMCP")
+    elif data[:3] == telnetlib.IAC + telnetlib.WONT + b'\xc9':  # GMCP
+        player.gmcp = False
+        log_info(f"Player {player.fd} does not support GMCP")
+        
+    if data[:3] == telnetlib.IAC + telnetlib.DO + b'\x01':  # Echo
+        player.echo = True
+        log_info(f"Player {player.fd} supports Echo")
+    elif data[:3] == telnetlib.IAC + telnetlib.DONT + b'\x01':  # Echo
+        player.echo = False
+        log_info(f"Player {player.fd} does not support Echo")
+        
+def send_gmcp_messages(players):
+    for player in players:
+        if player.gmcp:
+            while not player.gmcp_output_queue.empty():
+                try:
+                    # Get the next message from the queue
+                    msg = player.gmcp_output_queue.get()
+
+                    # Send the message
+                    player.socket.send(msg)
+                except (BrokenPipeError, OSError):
+                    handle_disconnection(player)
+                except Exception as e:  # This will catch any other types of exceptions
+                    log_error(f"Unexpected error while sending GMCP message: {e}")
 
 def game_loop(server_socket):
-
     while True:
-        
         # Rebuild the list of sockets to monitor at the start of each loop iteration
         sockets = [server_socket] + [player.socket for player in player_manager.get_players()]
 
         # Use select to wait for data to be available on any socket
         ready_to_read, _, _ = select.select(sockets, [], [], 0)
-        
+
         # First, read all data
         player_data = {}
         for sock in ready_to_read:
@@ -57,6 +89,7 @@ def game_loop(server_socket):
                     log_info(f"Accepted connection from {addr}")
                     handle_new_client(client_sock)
                     sockets.append(client_sock)  # Add the new socket to the list
+                    client_sock.send(telnetlib.IAC + telnetlib.DO + b'\xc9')
                 except OSError as e:
                     log_error(f"OS error while accepting new connection: {e}")
                 except socket.error as e:
@@ -69,9 +102,13 @@ def game_loop(server_socket):
                 if player:
                     try:
                         data = sock.recv(1024)
+                        # print(str(data))
                         if data:
-                            msg = data.decode('utf-8')
-                            player_data[player] = msg.split('\n')  # Split the message into commands
+                            if data[:2] in [telnetlib.IAC + telnetlib.WILL, telnetlib.IAC + telnetlib.WONT]:
+                                handle_telnet_negotiation(data, player)
+                            else:
+                                msg = data.decode('utf-8')
+                                player_data[player] = msg.split('\n')  # Split the message into commands
                     except ConnectionAbortedError:
                         handle_disconnection(player, "Connection aborted")
                         sockets.remove(sock)  # Remove the socket from the list
@@ -110,6 +147,9 @@ def game_loop(server_socket):
 
         # Update game state
         update_game_state()
+        
+        # Send all GMCP messages
+        send_gmcp_messages(player_manager.get_players(LoggedIn=True))
 
         # Sleep for a bit to control the loop's rate
         time.sleep(0.1)

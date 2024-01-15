@@ -2,10 +2,14 @@
 
 import sys
 import socket
+import json
+import telnetlib
 
 # import local files
 import mud_password
 import mud_consts
+
+
 
 
 from mud_objects import Player, PlayerManager
@@ -86,7 +90,7 @@ def send_message(player, msg):
     
 def process_output(NewLineAtStart=True):
     for player in player_manager.get_players(LoggedIn=False):
-        if player.output_buffer:
+        if player.output_buffer != "":
             if player.loggedin:
                 if NewLineAtStart:
                     player.output_buffer = "\n" + player.output_buffer
@@ -103,6 +107,8 @@ def process_output(NewLineAtStart=True):
                 log_error(f"Unexpected error while sending player output: {e}")
             finally:
                 player.output_buffer = ""
+                
+
               
 # Character login functions
 
@@ -225,6 +231,9 @@ def finish_login(player, msg, log_msg):
     if player.awaiting_reconnect_confirmation is False:
         send_message(player, mud_consts.MOTD)
     player.load()
+    #DB Hack - when adding new things to character, use this to ensure all old characters get it:
+    player.character.alignment = 0
+    #DB Hack end
     player.save()
     if player.character.race == '':
         log_error("finish_login(): why did a player make it here without a race?")
