@@ -3,8 +3,9 @@ from datetime import datetime
 import pickle
 
 import mud_consts
+from mud_consts import RoomState
 from mud_comms import send_message, send_room_message, player_manager, handle_disconnection
-from mud_shared import colourize, is_NPC, report_mob_health, first_to_upper, log_error, search_items
+from mud_shared import colourize, is_NPC, report_mob_health, first_to_upper, log_error, search_items, check_flag
 
 from mud_world import room_manager
 from mud_objects import player_db, combat_manager
@@ -407,7 +408,7 @@ def recall_command(player, argument):
         send_message(player, "Recall cleared.\n")
         return        
     
-    if room_manager.get_room_by_vnum(player.room_id).cursed:
+    if check_flag(room_manager.get_room_by_vnum(player.room_id).room_flags, RoomState.CURSED):
         send_message(player, "Room is cursed and you cannot recall here.\n")
         return
 
@@ -621,6 +622,7 @@ def handle_player(player, msg):
         'i': 'inventory',
         'c': 'cast',
         'st': 'stand',
+        'sc': 'score',
         'j': 'scan',
         'x': 'scan',
         

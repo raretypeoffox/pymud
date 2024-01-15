@@ -149,6 +149,17 @@ and cunning intelligence.
 
 #OBJECTS
 
+#3101
+scroll flaming burning hands~
+a flaming scroll~
+A scroll with edges wreathed in harmless, flickering flames. The script inside dances like fire, almost alive.
+
+Perhaps you should "study scroll"...~
+~
+2 0 0
+0 0 0 0
+1 10 10
+
 #0
 
 #ROOMS
@@ -248,7 +259,7 @@ Shaded Grove~
 Tucked away from the main path, this secluded grove is a peaceful refuge. The ground
 is soft with fallen leaves, and the air is cool and still.
 ~
-3100 0 0 3
+3100 0 3
 D0
 ~
 ~
@@ -267,7 +278,7 @@ Babbling Brook~
 A small brook cuts through the forest, its waters clear and cold. The gentle babble 
 of the flowing water is soothing, and small fish can be seen darting in the shallows.
 ~
-3100 0 0 3
+3100 0 3
 D0
 ~
 ~
@@ -290,7 +301,7 @@ Hidden Glade~
 This hidden glade is a burst of light amidst the dense trees. Butterflies flit among 
 the wildflowers, and a sense of serenity pervades the air.
 ~
-3100 0 0 3
+3100 0 3
 D0
 ~
 ~
@@ -314,7 +325,7 @@ Rising abruptly from the forest floor is a large rocky outcrop. Moss and small s
 cling to its surface, and from its top, one can catch glimpses of the forest spread out 
 below.
 ~
-3100 0 0 3
+3100 0 3
 D0
 ~
 ~
@@ -333,7 +344,7 @@ Thorny Thicket~
 This area of the forest is dense with brambles and thorn bushes. Small animal paths 
 crisscross through the undergrowth, and the sound of birdsong is ever-present.
 ~
-3100 0 0 3
+3100 0 3
 D0
 ~
 ~
@@ -353,7 +364,7 @@ Several paths converge here, under the watchful eyes of ancient trees. A wooden
 SIGNPOST points in various directions, though the destinations are worn and 
 difficult to read.
 ~
-3100 0 0 3
+3100 0 3
 D0
 ~
 ~
@@ -381,7 +392,7 @@ Mushroom Ring~
 A perfect circle of mushrooms grows here, adding a touch of mystery to the forest.
 The air seems different here, almost as if filled with ancient magic.
 ~
-3100 0 0 3
+3100 0 3
 D0
 ~
 ~
@@ -404,7 +415,7 @@ Sunlight Clearing~
 A break in the canopy above allows sunlight to flood this clearing. Wild grasses 
 grow tall here, and the buzzing of bees is a constant melody.
 ~
-3100 0 0 3
+3100 0 3
 D0
 ~
 ~
@@ -429,7 +440,7 @@ To the east, the forest thickens, and a faint path hints at a hidden cave. The s
 forest hush near this path, suggesting the presence of a formidable creature in the vicinity. 
 The subtle shift in ambiance signals caution to those who venture towards the cave.
 ~
-3100 0 0 3
+3100 0 3
 D1
 You spot a bear's den towards the east. Probably best to avoid it...~
 den~
@@ -448,7 +459,7 @@ Overgrown Path~
 Nature has begun to reclaim this once-clear path. Vines and overgrown bushes make 
 the way forward challenging, but small wildlife trails suggest it's still in use.
 ~
-3100 0 0 3
+3100 0 3
 D1
 ~
 ~
@@ -468,7 +479,7 @@ The forest gradually opens up to a large meadow. Wildflowers sway in the breeze,
 and in the distance, the silhouette of a crumbling keep looms, with its solitary 
 standing tower.
 ~
-3100 0 0 3
+3100 0 3
 D1
 ~
 ~
@@ -492,7 +503,7 @@ contrast, a silent sentinel beckoning with tales of forgotten eras. Here, nature
 serenity meets history's whisper, creating an atmosphere of tranquil wonder and 
 subtle intrigue.
 ~
-3100 0 0 3
+3100 0 3
 D0
 ~
 ~
@@ -515,7 +526,7 @@ and ivy-clad walls exuding an air of ancient mysteries and long-forgotten tales.
 The path is lined with occasional wildflowers, providing a stark contrast to the
 keep's solemn appearance.
 ~
-3101 0 0 3
+3101 0 3
 D0
 ~
 ~
@@ -538,7 +549,7 @@ profound, broken only by the occasional drip of water from the cave's ceiling an
 bear's rhythmic breathing. This secluded den, a sanctuary for the slumbering giant, 
 exudes a sense of primal solitude and untouched wilderness.
 ~
-3101 0 0 3
+3101 8192 3
 D3
 ~
 ~
@@ -584,6 +595,8 @@ M 0 3108 1 3117     (bear)
 
 M 0 3109 2 3112     (wolf)
 M 0 3109 2 3116     (wolf)
+
+O 0 3101 1 3117     (scroll of burning hands)
 
 
   

@@ -226,14 +226,21 @@ def handle_origin_set(player, msg):
         send_message(player, mud_consts.ORIGIN_MSG)
         return
 
+from mud_abilities import Abilities
+
 def finish_login(player, msg, log_msg):    
     player.loggedin = True
     if player.awaiting_reconnect_confirmation is False:
         send_message(player, mud_consts.MOTD)
     player.load()
     #DB Hack - when adding new things to character, use this to ensure all old characters get it:
-    player.character.alignment = 0
-    #DB Hack end
+    if hasattr(player.character, 'alignment') == False:
+        log_info("finish_login(): adding alignment to player " + player.name)
+        player.character.alignment = 0
+    if hasattr(player.character, 'abilities') == False:
+        player.character.abilities = Abilities()
+        log_info("finish_login(): adding abilities to player " + player.name)
+    # #DB Hack end
     player.save()
     if player.character.race == '':
         log_error("finish_login(): why did a player make it here without a race?")

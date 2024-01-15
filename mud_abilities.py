@@ -34,6 +34,7 @@ SkillLevels = [
 # could move to object instance via an extra flag from .are file
 ScrollsAndSpellbooks = {
     3001: 'magic missile',
+    3101: 'burning hands',
 }
 
 SpellTingleMessages = [
@@ -190,14 +191,15 @@ class LearnedAbility:
         asterisks = '*' * num_asterisks
         
         # Append the asterisks to exp_level
-        exp_level += ' [' + asterisks.ljust(5) + ']'
-        
+        # Use string formatting to align the asterisks
+        exp_level += ' [{:<5}]'.format(asterisks)
+
         # Align self.name to the left with a width of 20 characters
         name_str = self.name.ljust(20)
-        
-        ret_str = f"{name_str}{exp_level} {self.experience}"        
+
+        ret_str = f"{name_str}{exp_level} {self.experience}"
         return ret_str
-    
+        
     def get_level(self):
         # Calculate the required experience for the next level
         required_exp = self.calculate_required_exp()
@@ -230,7 +232,7 @@ class Abilities:
 
             # chance to gain 1 extra experience
             if random.random() <= 0.25:
-                return self.abilities[ability_name].gain_experience(10)
+                return self.abilities[ability_name].gain_experience(10) # lower to 1 after beta testing
             return ""
                 
     def list_spells(self):

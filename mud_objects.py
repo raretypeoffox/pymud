@@ -39,13 +39,20 @@ class PlayerDatabase:
 
     def save_player(self, player):
         with self.lock:
+            
+            if player.name is None or player.name == "":
+                log_error("Player_DB: Error saving player, player name is None or empty")
+                return
+            
+            player_name = player.name.lower()
             character_data = pickle.dumps(player.character)
             inventory = [str(i) for i in player.inventory]
             self.cursor.execute('''
                 INSERT OR REPLACE INTO players (name, room_id, current_recall, created, lastlogin, title, inventory, character)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (player.name, player.room_id, player.current_recall, player.created, player.lastlogin, player.title, json.dumps(inventory), character_data))
+            ''', (player_name, player.room_id, player.current_recall, player.created, player.lastlogin, player.title, json.dumps(inventory), character_data))
             self.connection.commit()
+
 
     def load_player(self, name):
         with self.lock:
@@ -203,7 +210,7 @@ class ObjectDatabase:
             except json.JSONDecodeError:
                 log_error(f"Object DB Error: Invalid JSON in enchantments: {row[11]}")
                 continue
-            # print(obj)
+
             objects.append(obj)
         return objects
     
@@ -671,7 +678,7 @@ class Character:
         str += f"Hitroll: {self.hitroll}, AC: {self.ac}"
         str += self.get_prompt()
         return str
-        
+    
 class Equipment:
     def __init__(self):
         self.slots = {
@@ -895,7 +902,6 @@ class Room:
         self.area_number = 0
         self.room_flags = 0
         self.sector_type = 0
-        self.cursed = False
         
         self.doors = {}
         self.extended_descriptions = []
@@ -968,18 +974,26 @@ class Room:
         
     def scan(self, player=None):
         msg = ""
-        mob_count_per_exit = {}
+        count_per_exit = {}
         for exit in self.doors:
             if self.doors[exit]["locks"] == 0:
-                mob_count_per_exit[exit] = 0
+                count_per_exit[exit] = 0
                 msg += f"{first_to_upper(Exits.get_name_by_value(exit)): <10}"
                 if self.doors[exit]["description"] != "":
                     msg += f"({self.doors[exit]["description"]})"
                 msg += "\n"
+                for player in room_manager.get_room_by_vnum(self.doors[exit]["to_room"]).player_list:
+                    position_str = "."
+                    if player.character.position == "Sleep":
+                        position_str = " is sleeping here."
+                    elif player.character.position == "Rest":
+                        position_str = " is resting here."
+                    msg += colourize(f"    {player.name} {player.get_title()}{position_str}\n", "cyan")
+                    count_per_exit[exit] += 1
                 for mob in room_manager.get_room_by_vnum(self.doors[exit]["to_room"]).mob_list:
                     msg += colourize(f"    {first_to_upper(mob.template.long_desc)}", "cyan")
-                    mob_count_per_exit[exit] += 1
-                if mob_count_per_exit[exit] == 0:
+                    count_per_exit[exit] += 1
+                if count_per_exit[exit] == 0:
                     msg += "    You see no one here.\n"
             else:
                 msg += f"{first_to_upper(Exits.get_name_by_value(exit)): <10} Locked\n"
@@ -1042,7 +1056,7 @@ class Room:
         return msg
     
     def is_haven(self):
-        return check_flag(self.room_flags, mud_consts.RoomFlags.HAVEN)
+        return check_flag(self.room_flags, RoomFlags.HAVEN)
     
     def get_GMCP_room_info(self):        
         door_status = {}
@@ -1565,3 +1579,4 @@ mob_instance_manager = MobInstanceManager()
 object_instance_manager = ObjectInstanceManager()
 
 combat_manager = CombatManager()
+
