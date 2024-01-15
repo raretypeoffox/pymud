@@ -296,7 +296,7 @@ def sing_callback(player, argument):
         elif player.character.death_room is None or player.character.death_room == 3000:
             player.character.death_room = 3399
         
-        player.move_to_room(room_manager.get_room_by_vnum(3300))
+        player.move_to_room(room_manager.get(3300))
         send_room_message(player.current_room, f"{player.name} appears in a whirlwind of leaves and light, their eyes wide with wonder.\n", excluded_player=player)
     pass
 

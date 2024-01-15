@@ -122,17 +122,17 @@ def do_specials():
     if time_manager.ticks_elapsed % TICKS_SPECIAL > 0:
         return
     
-    send_room_message(room_manager.get_room_by_vnum(3001), colourize("You hear the waves crashing against the shore.\n", "blue"))
-    send_room_message(room_manager.get_room_by_vnum(3008), colourize("A faint, echoing whisper seems to drift through the cave, as if the very walls are murmuring a secret to those who dare to listen closely.\n", "blue"))
-    send_room_message(room_manager.get_room_by_vnum(3105), colourize("Soft, melodic sounds of water gently babbling over smooth stones fill the air, creating a soothing, tranquil ambiance.\n", "blue"))
-    send_room_message(room_manager.get_room_by_vnum(3112), colourize("A low, rumbling grunt echoes through the gully, sending a shiver down your spine as it hints at the presence of a large creature nearby.\n", "red"))
+    send_room_message(room_manager.get(3001), colourize("You hear the waves crashing against the shore.\n", "blue"))
+    send_room_message(room_manager.get(3008), colourize("A faint, echoing whisper seems to drift through the cave, as if the very walls are murmuring a secret to those who dare to listen closely.\n", "blue"))
+    send_room_message(room_manager.get(3105), colourize("Soft, melodic sounds of water gently babbling over smooth stones fill the air, creating a soothing, tranquil ambiance.\n", "blue"))
+    send_room_message(room_manager.get(3112), colourize("A low, rumbling grunt echoes through the gully, sending a shiver down your spine as it hints at the presence of a large creature nearby.\n", "red"))
     
     if time_manager.ticks_elapsed % (TICKS_SPECIAL * 3) == 0:
-        send_room_message(room_manager.get_room_by_vnum(3103), colourize("A soft melody seems to drift through the leaves of the ancient oak, fading in and out like a whispered secret.\n", "blue"))
+        send_room_message(room_manager.get(3103), colourize("A soft melody seems to drift through the leaves of the ancient oak, fading in and out like a whispered secret.\n", "blue"))
     elif time_manager.ticks_elapsed % (TICKS_SPECIAL * 2) == 0:
-        send_room_message(room_manager.get_room_by_vnum(3103), colourize("For a moment, the wind through the ancient oak's branches carries a melody, harmonious and old as time itself.\n", "blue"))
+        send_room_message(room_manager.get(3103), colourize("For a moment, the wind through the ancient oak's branches carries a melody, harmonious and old as time itself.\n", "blue"))
     else:
-        send_room_message(room_manager.get_room_by_vnum(3103), colourize("The rustling of the ancient oak's leaves briefly harmonizes into a melodic tune, as if nature itself is singing a forgotten song.\n", "blue"))
+        send_room_message(room_manager.get(3103), colourize("The rustling of the ancient oak's leaves briefly harmonizes into a melodic tune, as if nature itself is singing a forgotten song.\n", "blue"))
     
 
     

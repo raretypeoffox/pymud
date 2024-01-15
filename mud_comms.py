@@ -244,7 +244,7 @@ def finish_login(player, msg, log_msg):
     player.save()
     if player.character.race == '':
         log_error("finish_login(): why did a player make it here without a race?")
-    room = room_manager.get_room_by_vnum(player.room_id)
+    room = room_manager.get(player.room_id)
     room.add_player(player)
     player.set_room(room)
     send_message(player, msg)

@@ -91,7 +91,7 @@ def parse_mob(lines):
     sex = int(parts[2])
     
     current_mob = MobTemplate(mob_vnum, mob_keywords, mob_short_desc, mob_long_desc, mob_desc, act_flags, aff_flags, align, level, hitroll, ac, hitdice_num, hitdice_size, hitdice_bonus, damdice_num, damdice_size, damdice_bonus, gold, xp, sex)
-    mob_manager.add_mob_template(current_mob)         
+    mob_manager.add(current_mob)         
     
 def parse_object(lines):
     obj_vnum = int(lines[0][1:])
@@ -135,7 +135,7 @@ def parse_object(lines):
     
     # E and A sections not currently processed
     
-    object_manager.add_object(current_object)
+    object_manager.add(current_object)
     # print("Object", lines)
 
 def parse_room(lines):
@@ -177,8 +177,8 @@ def parse_room(lines):
             offset += offset_add
             current_room.add_extended_description(ex_desc_keywords, ex_desc_desc)
     
-    room_manager.add_room(current_room)
-    # print("Room", lines)
+    room_manager.add(current_room)
+
     
 def parse_reset(line):
     line_index = 0
@@ -339,9 +339,9 @@ def reset_world():
     print("Reset world...")
     
     for mob_reset in reset_manager.mob_resets:
-        mob_template = mob_manager.get_mob_template(mob_reset.mob_vnum)
+        mob_template = mob_manager.get(mob_reset.mob_vnum)
         if mob_template is not None:
-            room = room_manager.get_room_by_vnum(mob_reset.room_vnum)
+            room = room_manager.get(mob_reset.room_vnum)
             if room is not None:
                 # todo later: review max_count
                 # for i in range(mob_reset.max_count):
@@ -350,14 +350,14 @@ def reset_world():
                 if mob_reset.equipment:
                     for slot, obj_vnum in mob_reset.equipment.slots.items():
                         if obj_vnum != 0:
-                            obj_template = object_manager.get_object(obj_vnum)
+                            obj_template = object_manager.get(obj_vnum)
                             if obj_template is not None:
                                 obj = ObjectInstance(obj_template)
                                 object_instance_manager.add_object(obj)
                                 mob.equipment.equip(slot, obj)
                 if mob_reset.inventory:
                     for obj_vnum in mob_reset.inventory:
-                        obj_template = object_manager.get_object(obj_vnum)
+                        obj_template = object_manager.get(obj_vnum)
                         if obj_template is not None:
                             obj = ObjectInstance(obj_template)
                             object_instance_manager.add_object(obj)
@@ -369,9 +369,9 @@ def reset_world():
             print(f"Mob {mob_reset.mob_vnum} not found")
 
     for obj_reset in reset_manager.object_resets:
-        obj_template = object_manager.get_object(obj_reset.obj_vnum)
+        obj_template = object_manager.get(obj_reset.obj_vnum)
         if obj_template is not None:
-            room = room_manager.get_room_by_vnum(obj_reset.room_vnum)
+            room = room_manager.get(obj_reset.room_vnum)
             if room is not None:
                 # check if obj is already in room
                 add_obj = True

@@ -49,6 +49,7 @@ def process_victory(player, mob_level):
         send_info_message(f"{player.name} has reached level {player.character.level}!")
 
 def process_PC_death(player, mob=None):
+    combat_manager.end_combat_with_all(player)
     send_room_message(player.current_room, colourize(f"{player.name} is dead!!!\n", "red"), excluded_player=player, excluded_msg=colourize("You are dead!!!", "red"))
     send_message(player, colourize(player.character.death_xp_loss(), "red"))
     if mob is not None:
@@ -62,7 +63,7 @@ def process_PC_death(player, mob=None):
     elif player.character.death_room is None:
         player.character.death_room = 3000
     
-    player.move_to_room(room_manager.get_room_by_vnum(player.character.death_room))
+    player.move_to_room(room_manager.get(player.character.death_room))
     player.character.current_hitpoints = player.character.max_hitpoints // 2
 
 def deal_damage(attacker, defender, damage, msg, type=0):
@@ -188,7 +189,7 @@ def attempt_flee(combantant_one, combatant_two, random_door):
         # combat_manager.end_all_combat(combantant_one)
         # if combatant_two.character.NPC is True:
         #     combatant_two.aggro_list.add(combantant_one)
-        combantant_one.move_to_room(room_manager.get_room_by_vnum(combantant_one.current_room.doors[random_door]["to_room"]))
+        combantant_one.move_to_room(room_manager.get(combantant_one.current_room.doors[random_door]["to_room"]))
         return True
     else:
         return False

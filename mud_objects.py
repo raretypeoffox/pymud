@@ -188,7 +188,7 @@ class ObjectDatabase:
             except ValueError:
                 log_error(f"Object DB Error: Invalid UUID: {row[0]}")
                 continue
-            obj = ObjectInstance(object_manager.get_object(row[1]), instance_uuid=obj_uuid)
+            obj = ObjectInstance(object_manager.get(row[1]), instance_uuid=obj_uuid)
             if obj is None:
                 log_error(f"Object DB Error: no object template found with vnum {row[0]}")
                 continue
@@ -227,6 +227,33 @@ class ObjectDatabase:
 
 player_db = PlayerDatabase('player_database.db')
 object_db = ObjectDatabase('object_database.db')
+
+class TemplateManager:
+    def __init__(self):
+        self.templates = {}
+        
+    def add(self, template):
+        self.templates[template.vnum] = template
+    
+    def get(self, vnum):
+        return self.templates.get(vnum)
+    
+    def remove(self, vnum):
+        if vnum in self.templates:
+            del self.templates[vnum]
+            
+    def get_all(self):
+        return self.templates.values()
+    
+    def __str__(self):
+        msg = ""
+        for template in self.templates.values():
+            msg += f"{template.vnum}: {template.name}\n"
+        return msg
+    
+room_manager = TemplateManager()
+mob_manager = TemplateManager()
+object_manager = TemplateManager()
 
 class PlayerManager:
     def __init__(self):
@@ -323,7 +350,7 @@ class Player:
         if player_data is None:
             return False
         self.room_id = int(player_data['room_id'])
-        self.set_room(room_manager.get_room_by_vnum(self.room_id))
+        self.set_room(room_manager.get(self.room_id))
         self.current_recall = int(player_data['current_recall'])
         self.created = player_data['created']
         self.lastlogin = datetime.now()
@@ -740,72 +767,7 @@ class Group:
 
     def remove_member(self, player):
         self.members.remove(player)
-        
-# Note: managers are for managing the base templates, not the instances
-
-class MobManager:
-    def __init__(self):
-        self.mob_templates = {}
-        
-    def add_mob_template(self, mob):
-        self.mob_templates[mob.vnum] = mob
-
-    def get_mob_template(self, vnum):
-        return self.mob_templates.get(vnum)
-
-    def remove_mob_template(self, vnum):
-        if vnum in self.mob_templates:
-            del self.mob_templates[vnum]
-
-    def get_all_mob_templates(self):
-        return self.mob_templates.values()
-        
-class ObjectManager:
-    def __init__(self):
-        self.objects = {}
-        
-    def add_object(self, obj):
-        self.objects[obj.vnum] = obj
-
-    def get_object(self, vnum):
-        return self.objects.get(vnum)
-
-    def remove_object(self, vnum):
-        if vnum in self.objects:
-            del self.objects[vnum]
-
-    def get_all_objects(self):
-        return self.objects.values()
-    
-        
-class RoomManager:
-    def __init__(self):
-        self.rooms = {}
-    
-    def add_room(self, room):
-        self.rooms[room.vnum] = room
-        
-    def get_room_by_vnum(self, vnum):
-        ''' Returns a room object by its vnum, otherwise returns None'''
-        return self.rooms.get(vnum)
-
-    def remove_room(self, vnum):
-        if vnum in self.rooms:
-            del self.rooms[vnum]
-
-    def get_all_rooms(self):
-        return self.rooms.values()
-
-    def get_rooms_by_attribute(self, attribute_name, value):
-        return [room for room in self.rooms.values() if getattr(room, attribute_name, None) == value]
-
-    def __str__(self):
-        msg = ""
-        for room in self.rooms.values():
-            msg += f"Room {room.vnum}: {room.name}\n"
-        return msg
-    
-
+  
 class MobTemplate:
     def __init__(self, vnum, keywords, short_desc, long_desc, desc, act_flags, aff_flags, align, level, hitroll, ac, hitdice_num, hitdice_size, hitdice_bonus, damdice_num, damdice_size, damdice_bonus, gold, xp, sex):
         self.vnum = vnum
@@ -963,7 +925,7 @@ class Room:
     def choose_random_door(self, exclude_other_area=True):
         available_doors = []
         for door in self.doors:
-            if exclude_other_area and room_manager.get_room_by_vnum(self.doors[door]["to_room"]).area_number != self.area_number:
+            if exclude_other_area and room_manager.get(self.doors[door]["to_room"]).area_number != self.area_number:
                 continue
             if self.doors[door]["locks"] == 0:
                 available_doors.append(door)
@@ -982,7 +944,7 @@ class Room:
                 if self.doors[exit]["description"] != "":
                     msg += f"({self.doors[exit]["description"]})"
                 msg += "\n"
-                for player in room_manager.get_room_by_vnum(self.doors[exit]["to_room"]).player_list:
+                for player in room_manager.get(self.doors[exit]["to_room"]).player_list:
                     position_str = "."
                     if player.character.position == "Sleep":
                         position_str = " is sleeping here."
@@ -990,7 +952,7 @@ class Room:
                         position_str = " is resting here."
                     msg += colourize(f"    {player.name} {player.get_title()}{position_str}\n", "cyan")
                     count_per_exit[exit] += 1
-                for mob in room_manager.get_room_by_vnum(self.doors[exit]["to_room"]).mob_list:
+                for mob in room_manager.get(self.doors[exit]["to_room"]).mob_list:
                     msg += colourize(f"    {first_to_upper(mob.template.long_desc)}", "cyan")
                     count_per_exit[exit] += 1
                 if count_per_exit[exit] == 0:
@@ -1120,8 +1082,8 @@ class Resets:
             return False
         while self.mob_repop_queue:
             mob_reset = self.mob_repop_queue.pop()
-            mob_template = mob_manager.get_mob_template(mob_reset.mob_vnum)
-            room = room_manager.get_room_by_vnum(mob_reset.room_vnum)
+            mob_template = mob_manager.get(mob_reset.mob_vnum)
+            room = room_manager.get(mob_reset.room_vnum)
             MobInstance(mob_template, mob_reset, room)
             
             # todo
@@ -1140,8 +1102,8 @@ class Resets:
             return False
         while self.obj_repop_queue:
             obj_reset = self.obj_repop_queue.pop()
-            room = room_manager.get_room_by_vnum(obj_reset.room_vnum)
-            ObjectInstance(object_manager.get_object(obj_reset.obj_vnum), obj_reset=obj_reset, room=room)
+            room = room_manager.get(obj_reset.room_vnum)
+            ObjectInstance(object_manager.get(obj_reset.obj_vnum), obj_reset=obj_reset, room=room)
             # todo
             # code for objects within containers
         return True
@@ -1370,7 +1332,7 @@ class ObjectInstance:
     def load(self):
         if self.location_type == "room":
             self.location = int(self.location)
-            room = room_manager.get_room_by_vnum(self.location)
+            room = room_manager.get(self.location)
             if room is not None:
                 self.location_instance = room
             else:
@@ -1570,10 +1532,9 @@ class CombatManager:
 
 
 
-room_manager = RoomManager()
-mob_manager = MobManager()
+
+
 reset_manager = Resets()
-object_manager = ObjectManager()
 
 mob_instance_manager = MobInstanceManager()
 object_instance_manager = ObjectInstanceManager()

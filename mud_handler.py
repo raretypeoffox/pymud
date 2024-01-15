@@ -3,7 +3,7 @@ from datetime import datetime
 import pickle
 
 import mud_consts
-from mud_consts import RoomState
+from mud_consts import RoomFlags
 from mud_comms import send_message, send_room_message, player_manager, handle_disconnection
 from mud_shared import colourize, is_NPC, report_mob_health, first_to_upper, log_error, search_items, check_flag
 
@@ -399,7 +399,7 @@ def recall_command(player, argument):
         if recall_room_vnum == 0:
             send_message(player, "You have no recall set.\n")
             return
-        room_instance = room_manager.get_room_by_vnum(recall_room_vnum)
+        room_instance = room_manager.get(recall_room_vnum)
         send_message(player, f"Recall is set to: {room_instance.name}.\n")
         return
     elif argument == 'clear':
@@ -408,7 +408,7 @@ def recall_command(player, argument):
         send_message(player, "Recall cleared.\n")
         return        
     
-    if check_flag(room_manager.get_room_by_vnum(player.room_id).room_flags, RoomState.CURSED):
+    if check_flag(room_manager.get(player.room_id).room_flags, RoomFlags.NO_RECALL):
         send_message(player, "Room is cursed and you cannot recall here.\n")
         return
 
@@ -508,7 +508,7 @@ def player_movement(player, direction):
         if direction in room_instance.doors:
             if room_instance.doors[direction]["locks"] == 0:
                 move_player(player, room_instance.vnum, room_instance.doors[direction]["to_room"], msg_to_room=colourize(f"{first_to_upper(player.name)} leaves to the {mud_consts.DIRECTIONS[direction]}.\n", "green"))
-                send_room_message(room_manager.get_room_by_vnum(room_instance.doors[direction]["to_room"]) , colourize(f"{first_to_upper(player.name)} arrives from the {mud_consts.DIRECTIONS_REVERSE[direction]}.\n", "green"), excluded_player=player)
+                send_room_message(room_manager.get(room_instance.doors[direction]["to_room"]) , colourize(f"{first_to_upper(player.name)} arrives from the {mud_consts.DIRECTIONS_REVERSE[direction]}.\n", "green"), excluded_player=player)
                 for other_player in set(room_instance.get_players()):
                     if other_player.follow == player:
                         send_message(other_player, f"You follow {player.name} {mud_consts.DIRECTIONS[direction]}.\n")
@@ -523,7 +523,7 @@ def goto_command(player, argument):
         send_message(player, "You must specify a room number.\n")
     else:
         room_id = int(argument)
-        room = room_manager.get_room_by_vnum(room_id)
+        room = room_manager.get(room_id)
 
         if room is None:
             send_message(player, "No room with that number found.\n")
@@ -672,8 +672,8 @@ def move_player(player, old_room_vnum, new_room_vnum, msg_to_room=None, msg_to_p
         return
     
     
-    send_room_message(room_manager.get_room_by_vnum(old_room_vnum), msg_to_room, excluded_player=player, excluded_msg=msg_to_player)
-    player.move_to_room(room_manager.get_room_by_vnum(new_room_vnum))
+    send_room_message(room_manager.get(old_room_vnum), msg_to_room, excluded_player=player, excluded_msg=msg_to_player)
+    player.move_to_room(room_manager.get(new_room_vnum))
     look_command(player, "")
     
     # check for aggie mob
