@@ -55,7 +55,7 @@ class PlayerGMCP:
             'gold': self.player.character.gold,
             'health': self.player.character.current_hitpoints,
             'health_max': self.player.character.max_hitpoints,
-            'hitroll': self.player.get_hitroll(),
+            'hitroll': self.player.character.get_hitroll(),
             'int': self.player.character.int,
             'level': self.player.character.level,
             'mana': self.player.character.current_mana,

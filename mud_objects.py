@@ -28,8 +28,10 @@ class PlayerDatabase:
                 created TEXT,
                 lastlogin TEXT,
                 title TEXT,
+                character BLOB,
                 inventory TEXT,
-                character BLOB
+                equipment BLOB,
+                abilities BLOB
             )
         ''')
         self.connection.commit()
@@ -43,27 +45,33 @@ class PlayerDatabase:
             
             player_name = player.name.lower()
             character_data = pickle.dumps(player.character)
-            inventory = [str(i) for i in player.inventory]
+            inventory_data = json.dumps([str(i) for i in player.inventory.inventory_uuids])
+            equipment_data = pickle.dumps(player.equipment)
+            # abilities_data = pickle.dumps(player.abilities)
+            abilities_data = None
             self.cursor.execute('''
-                INSERT OR REPLACE INTO players (name, room_id, current_recall, created, lastlogin, title, inventory, character)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (player_name, player.room_id, player.current_recall, player.created, player.lastlogin, player.title, json.dumps(inventory), character_data))
+                INSERT OR REPLACE INTO players (name, room_id, current_recall, created, lastlogin, title, character, inventory, equipment, abilities)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (player_name, player.room_id, player.current_recall, player.created, player.lastlogin, player.title, character_data, inventory_data, equipment_data, abilities_data))
             self.connection.commit()
 
 
     def load_player(self, name):
         with self.lock:
             self.cursor.execute('''
-            SELECT room_id, current_recall, created, lastlogin, title, inventory, character FROM players WHERE LOWER(name) = LOWER(?)
+            SELECT room_id, current_recall, created, lastlogin, title, character, inventory, equipment, abilities FROM players WHERE LOWER(name) = LOWER(?)
             ''', (name.lower(),))
             result = self.cursor.fetchone()
             if result is None:
                 log_error(f"Error loading player data for {name}")
                 return None
             else:
-                room_id, current_recall, created, lastlogin, title, inventory, character_data = result
-                inventory = set(uuid.UUID(i) for i in json.loads(inventory))
+                room_id, current_recall, created, lastlogin, title, character_data, inventory_data, equipment_data, abilities_data = result
                 character = pickle.loads(character_data)
+                inventory = set(uuid.UUID(i) for i in json.loads(inventory_data)) if inventory_data is not None else set()
+                equipment = pickle.loads(equipment_data)
+                # abilities = pickle.loads(abilities_data)
+                abilities = None
                 return {
                 'name': name,
                 'room_id': room_id,
@@ -71,8 +79,10 @@ class PlayerDatabase:
                 'created': created,
                 'lastlogin': lastlogin,
                 'title': title,
+                'character': character,
                 'inventory' : inventory,
-                'character': character
+                'equipment' : equipment,
+                'abilities' : abilities
                 }
     
     def get_player_created_lastlogin(self, name):
@@ -145,7 +155,7 @@ class ObjectDatabase:
             str(obj.uuid),
             obj.vnum,
             obj.name,
-            obj.description,
+            obj.desc,
             obj.action_desc,
             obj.state.value,
             obj.insured,
@@ -366,12 +376,11 @@ class Player:
         self.current_room = None
         self.current_recall = 0
         self.character = Character()
+        self.inventory = Inventory()
+        self.equipment = Equipment()
         
         self.group = None
         self.follow = None
-        
-        self.inventory = set() # set of object UUIDs (saved)
-        self.inventory_list = {} # key: UUID, value: ObjectInstance (not saved)
         
         self.created = datetime.now()
         self.lastlogin = datetime.now()
@@ -390,16 +399,10 @@ class Player:
         self.created = player_data['created']
         self.lastlogin = datetime.now()
         self.title = player_data['title']
-        self.inventory = player_data['inventory']
+        self.inventory.inventory_uuids = player_data['inventory']
         self.character = player_data['character']
         
-        # load inventory_list
-        for uuid in self.inventory:
-            # print(f"Loading object {uuid}")
-            obj = object_instance_manager.get_object_by_uuid(uuid)
-            # print(f"Loaded object {obj}")
-            if obj is not None:
-                self.inventory_list[uuid] = obj
+        self.inventory.load()
         
         return True
         
@@ -431,8 +434,9 @@ class Player:
         if equipped:
             description.append("They are wearing:")
             description.append(equipped)
-        if self.inventory:
-            description.append(self.get_inventory_description(player_name=self.name))
+        inventory_desc = self.inventory.get_description(char_name=self.name)
+        if inventory_desc != "":
+            description.append(inventory_desc)
 
         return "\n".join(description)
     
@@ -452,43 +456,7 @@ class Player:
         
     def get_prompt(self):
         return self.character.get_prompt()
-    
-    def add_inventory(self, obj_uuid):
-        self.inventory.add(obj_uuid)
-        obj = object_instance_manager.get_object_by_uuid(obj_uuid)
-        if obj is not None:
-            self.inventory_list[obj_uuid] = obj
-        
-    def remove_inventory(self, obj_uuid):
-        self.inventory.remove(obj_uuid)
-        del self.inventory_list[obj_uuid]
-    
-    def get_objects(self):
-        return set(self.inventory_list.values())
 
-    def get_inventory_description(self, player_name=None):
-        if player_name is None:
-            if len(self.inventory_list) == 0:
-                return "You are not carrying anything.\n"    
-            msg = "You are carrying:\n"
-        else:
-            if len(self.inventory_list) == 0:
-                return f"{player_name} is not carrying anything.\n"
-            msg = f"{player_name} is carrying:\n"
-        
-        inventory_items = {}
-        for obj in self.inventory_list.values():
-            if obj.name in inventory_items:
-                inventory_items[obj.name] += 1
-            else:
-                inventory_items[obj.name] = 1
-
-        for name, count in inventory_items.items():
-            count_str = f"({count:2})" if count > 1 else "     "
-            msg += f"  {count_str} {name}\n"
-                
-        return msg
-    
     def tick(self):
         self.character.tick(self.current_room)
         if self.gmcp is not None:
@@ -661,7 +629,62 @@ class Character:
         str += f"Hitroll: {self.hitroll}, AC: {self.ac}"
         str += self.get_prompt()
         return str
+
+class Inventory:
+    def __init__(self):
+        self.inventory_uuids = set() # set of object UUIDs (saved)
+        self.inventory_list = {} # key: UUID, value: ObjectInstance (not saved)
+
+    def add(self, object):
+        self.inventory_uuids.add(object.uuid)
+        self.inventory_list[object.uuid] = object
+        
+    def remove(self, object):
+        self.inventory_uuids.remove(object.uuid)
+        del self.inventory_list[object.uuid]
+        
+    def get_all(self):
+        return set(self.inventory_list.values())
     
+    def load(self):
+        for uuid in self.inventory_uuids:
+            obj = object_instance_manager.get_object_by_uuid(uuid)
+            if obj is not None:
+                self.inventory_list[uuid] = obj
+                
+    def get_description(self, char_name=None):
+        if char_name is None:
+            if len(self.inventory_list) == 0:
+                return "You are not carrying anything.\n"    
+            msg = "You are carrying:\n"
+        else:
+            if len(self.inventory_list) == 0:
+                return f"{char_name} is not carrying anything.\n"
+            msg = f"{char_name} is carrying:\n"
+        
+        inventory_items = {}
+        for obj in self.get_all():
+            if obj.name in inventory_items:
+                inventory_items[obj.name] += 1
+            else:
+                inventory_items[obj.name] = 1
+
+        for name, count in inventory_items.items():
+            count_str = f"({count:2})" if count > 1 else "     "
+            msg += f"  {count_str} {name}\n"
+                
+        return msg
+    
+    def __str__(self): # for debugging
+        ret_str = "Inventory UUIDs:\n"
+        for uuid in self.inventory_uuids:
+            ret_str += "UUID:\t" + str(uuid) + "\n"
+
+        print("\nInventory List:")
+        for key, value in self.inventory_list.items():
+            ret_str +=  f"Key: {key}, Value: {value}\n"
+        return ret_str
+   
 class Equipment:
     def __init__(self):
         self.slots = {
@@ -991,6 +1014,8 @@ class MobInstance:
         self.current_mana = self.max_mana
         
         self.character = Character(NPC=True)
+        self.inventory = Inventory()
+        self.equipment = Equipment()
         
         self.character.max_hitpoints = dice_roll(template.hitdice_num, template.hitdice_size, template.hitdice_bonus)
         self.character.current_hitpoints = self.character.max_hitpoints
@@ -1005,9 +1030,6 @@ class MobInstance:
         mob_instance_manager.add(self)
         
         # todo
-        self.equipment = Equipment()
-        self.inventory = set() # set of object UUIDs (saved)
-        self.inventory_list = {} # key: UUID, value: ObjectInstance (not saved)
         
         self.group = None
         self.follow = None
@@ -1035,22 +1057,12 @@ class MobInstance:
         if equipped:
             description.append("They are wearing:")
             description.append(equipped)
-        if self.inventory:
-            description.append("You peek into their inventory and see:")
-            for item in self.inventory_list.values():
-                description.append(f"\t{item.name}")
+            
+        inventory_desc = self.inventory.get_description(char_name=first_to_upper(self.name))
+        if inventory_desc != "":
+            description.append(inventory_desc)
 
         return "\n".join(description) + "\n"
-        
-    def add_inventory(self, obj_uuid):
-        self.inventory.add(obj_uuid)
-        obj = object_instance_manager.get_object_by_uuid(obj_uuid)
-        if obj is not None:
-            self.inventory_list[obj_uuid] = obj
-        
-    def remove_inventory(self, obj_uuid):
-        self.inventory.remove(obj_uuid)
-        del self.inventory_list[obj_uuid]
       
     def tick(self):
         self.character.tick(self.current_room)
@@ -1118,10 +1130,10 @@ class ObjectInstance:
             self.location_instance.remove_object(self)
         elif self.location_type == "mob":
             if self.location_instance is not None:
-                self.location_instance.remove_inventory(self.uuid)
+                self.location_instance.inventory.remove(self)
         elif self.location_type == "player":
             if self.location_instance is not None:
-                self.location_instance.remove_inventory(self.uuid)
+                self.location_instance.inventory.remove(self)
         else:
             log_error(f"Object imp: object {self.vnum} {self.name} is not in a known location: {self.location_type}")
             return
@@ -1168,7 +1180,7 @@ class ObjectInstance:
             reset_manager.add_to_obj_repop_queue(self.obj_reset)
         
         player.current_room.remove_object(self)
-        player.add_inventory(self.uuid)
+        player.inventory.add(self)
         self.update_state(ObjState.INVENTORY)
         self.update_location("player", player.name, player)
         self.save()
@@ -1177,7 +1189,7 @@ class ObjectInstance:
     def drop(self, player):
         # todo code to check for no drop flag
         
-        if self.uuid not in player.inventory:
+        if self.uuid not in player.inventory.inventory_uuids:
             log_error(f"Object drop: object {self.vnum}, {self.name} not in {player.name} inventory")
             return False
         
@@ -1188,13 +1200,13 @@ class ObjectInstance:
         self.update_state(ObjState.DROPPED)
         
         player.current_room.add_object(self)
-        player.remove_inventory(self.uuid)
+        player.inventory.remove(self)
         self.update_location("room", player.current_room.vnum, player.current_room)
         self.save()
         return True
      
     def give(self, player, target):
-        if self.uuid not in player.inventory:
+        if self.uuid not in player.inventory.inventory_uuids:
             log_error(f"Object give: object {self.vnum}, {self.name} not in {player.name} inventory")
             return False
         
@@ -1210,8 +1222,8 @@ class ObjectInstance:
             target_is = "mob"
 
         self.update_location(target_is, target.name, target)    
-        player.remove_inventory(self.uuid)
-        target.add_inventory(self.uuid)
+        player.inventory.remove(self)
+        target.inventory.add(self)
         
         self.save()
         return True

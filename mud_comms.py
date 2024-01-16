@@ -222,7 +222,6 @@ def handle_origin_set(player, msg):
         return
 
 from mud_abilities import Abilities
-from mud_objects import Inventory
 
 def finish_login(player, msg, log_msg):    
     player.loggedin = True
@@ -236,13 +235,7 @@ def finish_login(player, msg, log_msg):
     if hasattr(player.character, 'abilities') == False:
         player.character.abilities = Abilities()
         log_info("finish_login(): adding abilities to player " + player.name)
-    if hasattr(player, 'inventory_list') == True:
-        new_inv = Inventory()
-        new_inv.inventory = player.inventory
-        new_inv.inventory_list = player.inventory_list
-        del player.inventory
-        del player.inventory_list
-        
+
     # #DB Hack end
     player.save()
     if player.character.race == '':

@@ -217,7 +217,7 @@ def search_items(items: set, keyword: str) -> object:
         target = search_items((player.current_room.get_players() | player.current_room.get_mobs()), argument)
     
     For searching for keywords (eg for look):
-        all_items = (room.get_players() | player.get_objects() | room.get_mobs() | room.get_objects() | room.get_doors() | room.get_extended_descriptions())
+        all_items = (room.get_players() | player.inventory.get_all() | room.get_mobs() | room.get_objects() | room.get_doors() | room.get_extended_descriptions())
         item = search_items(all_items, argument)
     '''
     if keyword == "":
