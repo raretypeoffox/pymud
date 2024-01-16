@@ -57,7 +57,7 @@ def game_loop(server_socket):
                     log_info(f"Accepted connection from {addr}")
                     handle_new_client(client_sock)
                     sockets.append(client_sock)  # Add the new socket to the list
-                    client_sock.send(TELNET_GMCP_ASK_SUPPORTED)
+                    client_sock.send(TELNET_GMCP_ASK_SUPPORTED) # Ask the client if they support GMCP
                 except OSError as e:
                     log_error(f"OS error while accepting new connection: {e}")
                 except socket.error as e:
@@ -66,15 +66,15 @@ def game_loop(server_socket):
                     log_error(f"Unexpected error while accepting new connection: {e}")
             else:
                 # If a client socket is ready to read, data is available from the client
-                player = player_manager.get_player_by_socket(sock)
+                player = player_manager.get(sock)
                 if player:
                     try:
                         data = sock.recv(1024)
                         # print(str(data))
                         if data:
-                            if data[:2] in [TELNET_WILL_SUPPORT, TELNET_WONT_SUPPORT]:
+                            if data[:2] in [TELNET_WILL_SUPPORT, TELNET_WONT_SUPPORT]: #Client is letting us know if they support GMCP
                                 handle_gmcp_negotiation(data, player)
-                            elif data[:3] == TELNET_GMCP_MSG_START:
+                            elif data[:3] == TELNET_GMCP_MSG_START: #Client is sending us a GMCP message
                                 handle_gmcp_message(data, player)
                             else:
                                 msg = data.decode('utf-8')

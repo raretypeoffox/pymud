@@ -91,7 +91,7 @@ def parse_mob(lines):
     sex = int(parts[2])
     
     current_mob = MobTemplate(mob_vnum, mob_keywords, mob_short_desc, mob_long_desc, mob_desc, act_flags, aff_flags, align, level, hitroll, ac, hitdice_num, hitdice_size, hitdice_bonus, damdice_num, damdice_size, damdice_bonus, gold, xp, sex)
-    mob_manager.add(current_mob)         
+    mob_manager.add(mob_vnum, current_mob)         
     
 def parse_object(lines):
     obj_vnum = int(lines[0][1:])
@@ -135,7 +135,7 @@ def parse_object(lines):
     
     # E and A sections not currently processed
     
-    object_manager.add(current_object)
+    object_manager.add(obj_vnum, current_object)
     # print("Object", lines)
 
 def parse_room(lines):
@@ -177,7 +177,7 @@ def parse_room(lines):
             offset += offset_add
             current_room.add_extended_description(ex_desc_keywords, ex_desc_desc)
     
-    room_manager.add(current_room)
+    room_manager.add(vnum, current_room)
 
     
 def parse_reset(line):

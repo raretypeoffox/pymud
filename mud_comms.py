@@ -2,9 +2,7 @@
 
 import sys
 import socket
-import json
-import queue
-import telnetlib
+
 
 # import local files
 import mud_password
@@ -111,9 +109,8 @@ def process_output(NewLineAtStart=True):
 # Character login functions
 
 def handle_new_client(client_socket):
-    player = Player(client_socket.fileno())
-    player.socket = client_socket
-    player_manager.add_player(player)
+    player = Player(client_socket.fileno(), client_socket)
+    player_manager.add(client_socket, player)
 
     send_message(player, mud_consts.Greeting)
     

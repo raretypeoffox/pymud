@@ -3,6 +3,7 @@ import json
 
 from mud_shared import log_error, log_info
 from mud_comms import handle_disconnection
+from mud_consts import Exits, RoomSectorType
 
 # Telnet constants - see https://tools.ietf.org/html/rfc854
 TELNET_IAC = b'\xff'
@@ -40,7 +41,7 @@ class PlayerGMCP:
         except Exception as e:  # This will catch any other types of exceptions
             log_error(f"Unexpected error while adding GMCP message to output queue: {e}")
         
-    def update_GMCP_status(self):
+    def update_status(self):
         if self.player.loggedin is False:
             return
         status = {
@@ -69,9 +70,6 @@ class PlayerGMCP:
         }
         self.queue_message("Char", "Status", status)
     
-    def update_GMCP_vitals(self):
-        if self.player.loggedin is False:
-            return
         vitals = {
             'hp': self.character.current_hitpoints,
             'maxhp': self.character.max_hitpoints,
@@ -83,16 +81,32 @@ class PlayerGMCP:
             'tnlmax': self.character.tnl
         }
         self.queue_message("Char", "Vitals", vitals)
+           
+    def get_room_info(self):
+        room = self.player.current_room
+        if room is None:
+            log_error(f"PlayerGMCP: Player {self.player.name} has no current room!")
+            return {}
+                
+        door_status = {}
+        for door in room.door_list:
+            door_status[Exits.get_name_by_value(door.door_number)] = "O" if door.locks == 0 else "C"
+        
+        room = {
+            'details': {},
+            'environment': RoomSectorType.get_name_by_value(room.sector_type),
+            'exits': door_status,
+            'name': room.name,
+            'zone': room.area_number
+        }
+        return room
     
-    def update_GMCP_room(self):
+    def update_room(self):
         if self.player.loggedin is False:
             return
 
-        self.queue_message("Room", "Info", self.player.current_room.get_GMCP_room_info())
+        self.queue_message("Room", "Info", self.get_room_info())
         
-    def tick(self):
-        self.update_GMCP_status()
-        self.update_GMCP_vitals()
       
 def handle_gmcp_negotiation(data, player):
     # print("handle_telnet", str(data[:3]), TELNET_IAC + TELNET_WILL)

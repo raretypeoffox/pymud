@@ -8,8 +8,6 @@ import time
 import random
 import uuid
 import json
-import queue
-import telnetlib
 from enum import Enum
 
 from mud_shared import dice_roll, colourize, log_info, log_error, check_flag, first_to_upper, process_keyword, process_search_output
@@ -227,28 +225,22 @@ class ObjectDatabase:
 player_db = PlayerDatabase('player_database.db')
 object_db = ObjectDatabase('object_database.db')
 
-class TemplateManager:
+class KeyedEntityManager:
     def __init__(self):
-        self.templates = {}
+        self.items = {}
         
-    def add(self, template):
-        self.templates[template.vnum] = template
+    def add(self, id, item):
+        self.items[id] = item
     
-    def get(self, vnum):
-        return self.templates.get(vnum)
+    def get(self, id):
+        return self.items.get(id)
     
-    def remove(self, vnum):
-        if vnum in self.templates:
-            del self.templates[vnum]
+    def remove(self, id):
+        if id in self.items:
+            del self.items[id]
             
     def get_all(self):
-        return self.templates.values()
-    
-    def __str__(self):
-        msg = ""
-        for template in self.templates.values():
-            msg += f"{template.vnum}: {template.name}\n"
-        return msg
+        return self.items.values()
 
 class InstanceManager:
     def __init__(self):
@@ -327,35 +319,16 @@ class ObjectInstanceManager(InstanceManager):
         object_db.save_objects(objects)
         log_info(f"Saved {len(objects)} objects in {time.time() - start_time:.2f} seconds")
 
-class PlayerManager:
-    def __init__(self):
-        self.players = []
-        self.player_sockets = {}   
-        
-
-    def add_player(self, player):
-        self.players.append(player)
-        self.player_sockets[player.socket] = player
-
-    def remove_player(self, player):
-        try:
-            self.players.remove(player)
-            del self.player_sockets[player.socket]
-            return True
-        except ValueError:
-            return False
-        
-    def get_player_by_socket(self, socket):
-        return self.player_sockets.get(socket)        
-        
+class PlayerManager(KeyedEntityManager):
+   
     def get_players(self, LoggedIn=False):
         if not LoggedIn:
-            return self.players
+            return list(self.items.values())
         else:
-            return [player for player in self.players if player.loggedin]
+            return [player for player in self.items.values() if player.loggedin]
 
     def get_player_by_name(self, name):
-        for player in self.players:
+        for player in self.items.values():
             if player.name is None:
                 continue
             if player.name.lower() == name.lower():
@@ -364,22 +337,20 @@ class PlayerManager:
     
     def save_all_players(self):
         start_time = time.time()
-        for player in self.players:
+        for player in self.items.values():
             if player.loggedin:
                 player_db.save_player(player)
         log_info(f"Player Manager: saved all players in {time.time() - start_time:.2f} seconds")
-
+    
     def disconnect_player(self, player, msg=""):
         if msg:
             try:
                 player.socket.send(msg.encode('utf-8'))
             except OSError:
-                # The socket is already closed
-                pass
+                pass # The socket is already closed
         player.save()
             
-        # Remove the player from the list of connected players
-        return self.remove_player(player)
+        return self.remove(player.socket)
 
 class PlayerConnection:
     def __init__(self, player, socket, fd):
@@ -395,9 +366,9 @@ class PlayerConnection:
         self.awaiting_origin = False
 
 class Player:
-    def __init__(self, fd):
+    def __init__(self, fd, socket):
         self.fd = fd
-        self.socket = None
+        self.socket = socket
         self.output_buffer = ""
         self.loggedin = False
         self.reconnect_prompt = False
@@ -462,9 +433,8 @@ class Player:
             new_room.add_player(self)
             self.current_room = new_room
         if self.gmcp is not None:
-            self.gmcp.update_GMCP_status()
-            self.gmcp.update_GMCP_vitals()
-            self.gmcp.update_GMCP_room()
+            self.gmcp.update_status()
+            self.gmcp.update_room()
             
     def get_keywords(self):
         return [self.name.lower()]
@@ -544,7 +514,7 @@ class Player:
     def tick(self):
         self.character.tick(self.current_room)
         if self.gmcp is not None:
-            self.gmcp.tick()
+            self.gmcp.update_status()
 
 class Character:
     def __init__(self, NPC=False):
@@ -837,33 +807,7 @@ class ObjectTemplate:
         # E and A are not used for now
         
         self.max_hitpoints = 100 # in the future, can use this for object condition
-    
-class Door:
-    def __init__(self, door_number, door_description, keywords, locks, key, to_room):
-        self.door_number = door_number
-        self.description = door_description
-        self.keywords = keywords
-        self.locks = locks
-        self.key = key
-        self.to_room = to_room
-        
-    def get_keywords(self):
-        return self.keywords.split()
-    
-    def get_description(self):
-        return self.description
-
-class ExtendedDescription:
-    def __init__(self, keywords, description):
-        self.keywords = keywords
-        self.description = description
-        
-    def get_keywords(self):
-        return self.keywords.split()
-    
-    def get_description(self):
-        return self.description
-        
+          
 class Room:
     def __init__(self, vnum):
         self.vnum = vnum
@@ -1027,21 +971,32 @@ class Room:
     
     def is_haven(self):
         return check_flag(self.room_flags, RoomFlags.HAVEN)
-    
-    def get_GMCP_room_info(self):        
-        door_status = {}
-        for door in self.door_list:
-            door_status[Exits.get_name_by_value(door.door_number)] = "O" if door.locks == 0 else "C"
+
+class Door:
+    def __init__(self, door_number, door_description, keywords, locks, key, to_room):
+        self.door_number = door_number
+        self.description = door_description
+        self.keywords = keywords
+        self.locks = locks
+        self.key = key
+        self.to_room = to_room
         
-        room = {
-            'details': {},
-            'environment': RoomSectorType.get_name_by_value(self.sector_type),
-            'exits': door_status,
-            'name': self.name,
-            'zone': self.area_number
-        }
-        return room
+    def get_keywords(self):
+        return self.keywords.split()
     
+    def get_description(self):
+        return self.description
+
+class ExtendedDescription:
+    def __init__(self, keywords, description):
+        self.keywords = keywords
+        self.description = description
+        
+    def get_keywords(self):
+        return self.keywords.split()
+    
+    def get_description(self):
+        return self.description 
 
 
 class ResetMob:
@@ -1447,9 +1402,9 @@ class CombatManager:
             return False
 
 
-room_manager = TemplateManager()
-mob_manager = TemplateManager()
-object_manager = TemplateManager()
+room_manager = KeyedEntityManager()
+mob_manager = KeyedEntityManager()
+object_manager = KeyedEntityManager()
 
 
 reset_manager = Resets()
