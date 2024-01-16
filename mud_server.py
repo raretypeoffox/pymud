@@ -7,7 +7,7 @@ import select
 
 VERSION = "0.0.1"
 
-from mud_comms import handle_new_client, handle_shutdown, player_manager, handle_disconnection, handle_client_login, process_output
+from mud_comms import handle_new_client, handle_shutdown, handle_disconnection, handle_client_login, process_output
 from mud_handler import handle_player
 from mud_world import build_world, reset_world, build_objects
 from mud_shared import log_info, log_error
@@ -15,7 +15,7 @@ from mud_combat import combat_loop
 from mud_ticks import timed_events
 from mud_gmcp import handle_gmcp_negotiation, handle_gmcp_message, send_gmcp_messages
 from mud_gmcp import TELNET_WILL_SUPPORT, TELNET_WONT_SUPPORT, TELNET_GMCP_ASK_SUPPORTED, TELNET_GMCP_MSG_START
-
+from mud_objects import player_manager
 
 from mud_shared import log_msg
 def log_client_input(player, msg):

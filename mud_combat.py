@@ -1,8 +1,10 @@
 # mud_combat.py
 
+import random
+
 import mud_consts
-from mud_consts import Exits
-from mud_shared import log_info, log_error, dice_roll, random_percent, colourize, first_to_upper, report_mob_health
+from mud_consts import Exits, RoomFlags
+from mud_shared import log_info, log_error, dice_roll, random_percent, colourize, first_to_upper, report_mob_health, check_flag
 
 from mud_world import mob_instance_manager
 from mud_comms import send_room_message_processing, send_message, send_room_message, send_global_message, send_info_message
@@ -95,10 +97,6 @@ def deal_damage(attacker, defender, damage, msg, type=0):
         else:
             log_error("Unexpected result, neither PC nor NPC!")
             return
-            
-    
-    
-    
 
 def one_hit(attacker, defender, type=0):
     
@@ -199,13 +197,14 @@ def kill_mob(player, mob):
     if combat_manager.in_combat(player):
         send_message(player, "You are already in combat!\n")
         return
+    if player.current_room.flag(RoomFlags.SAFE):
+        send_message(player, colourize(random.choice(mud_consts.NO_FIGHT_IN_SAFE_ROOM) + "\n", "bright white"))
+        return
     send_message(player, f"You attack {mob.name}!\n")
     combat_start(player, mob)
     combat_round(player, mob)
     if combat_manager.get_current_target(player):
         send_message(player, report_mob_health(combat_manager.get_current_target(player)))
-
-
 
 def combat_loop():
     

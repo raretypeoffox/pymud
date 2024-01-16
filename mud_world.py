@@ -100,11 +100,11 @@ def parse_object(lines):
     current_object.keywords, offset_add = parse_multi_line(lines[offset:])
     current_object.keywords = current_object.keywords.lower()
     offset += offset_add
-    current_object.short_description, offset_add = parse_multi_line(lines[offset:])
+    current_object.short_desc, offset_add = parse_multi_line(lines[offset:])
     offset += offset_add
-    current_object.long_description, offset_add = parse_multi_line(lines[offset:])
+    current_object.long_desc, offset_add = parse_multi_line(lines[offset:])
     offset += offset_add
-    current_object.action_description, offset_add = parse_multi_line(lines[offset:]) 
+    current_object.action_desc, offset_add = parse_multi_line(lines[offset:]) 
     offset += offset_add
     
     current_object.item_type, current_object.extra_flags, current_object.wear_flags = lines[offset].split()

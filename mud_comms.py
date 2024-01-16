@@ -8,11 +8,11 @@ import socket
 import mud_password
 import mud_consts
 
-from mud_objects import Player, PlayerManager
+from mud_objects import Player, player_manager
 from mud_world import room_manager
-from mud_shared import log_info, log_error, colourize, first_to_upper
+from mud_shared import log_info, log_error, colourize, first_to_upper, read_motd
 
-player_manager = PlayerManager()
+
 
 def send_room_message_processing(player, target, msg):
     
@@ -188,7 +188,7 @@ def handle_password_verification(player, msg):
             player.awaiting_race = True
             send_message(player, mud_consts.RACE_MSG)
         else:
-            finish_login(player, "Login successful!\n", f"{player.name} logged in.")
+            finish_login(player, "\nLogin successful!\n", f"{player.name} logged in.")
     else:
         send_message(player, "Incorrect password! Please try again: \n")
 
@@ -226,7 +226,7 @@ from mud_abilities import Abilities
 def finish_login(player, msg, log_msg):    
     player.loggedin = True
     if player.awaiting_reconnect_confirmation is False:
-        send_message(player, mud_consts.MOTD)
+        send_message(player, read_motd() + "\n")
     player.load()
     #DB Hack - when adding new things to character, use this to ensure all old characters get it:
     if hasattr(player.character, 'alignment') == False:
@@ -255,8 +255,7 @@ def finish_login(player, msg, log_msg):
 def handle_disconnection(player, msg=""):
     if player is None:
         return
-    print(f"{player.fd}: Player {player.name} disconnected: {msg}")
-    log_info(f"{player.name} disconnected: {msg}")
+    log_info(f"{player.fd}: {player.name} disconnected: {msg}")
     if player.current_room is not None:
         player.current_room.remove_player(player)
     if player_manager.disconnect_player(player, msg) and player.name != None:

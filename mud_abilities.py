@@ -143,7 +143,7 @@ class LearnedAbility:
             # Calculate 20% of the experience required for the next level
             required_exp = self.calculate_required_exp()
             if self.experience >= required_exp * 0.2:
-                return colourize(SpellTingleMessages[random.randint(0, len(SpellTingleMessages) - 1)] + "\n", "bright magenta")
+                return colourize(random.choice(SpellTingleMessages) + "\n", "bright magenta")
             else:
                 return level_up_message
 
@@ -155,10 +155,10 @@ class LearnedAbility:
             self.level += 1
             self.experience -= required_exp
             # Implement additional effects of leveling up (e.g., increase in power, new effects, etc.)
-            
-            level_up_message = SpellLevelMessages[random.randint(0, len(SpellLevelMessages) - 1)] + "\n"
-            level_up_mastery_message = SpellLevelMessagesByMastery[self.level - 1][random.randint(0, len(SpellLevelMessagesByMastery[self.level - 1]) - 1)] + "\n"
-            
+                
+            level_up_message = random.choice(SpellLevelMessages) + "\n"
+            level_up_mastery_message = random.choice(SpellLevelMessagesByMastery[self.level - 1]) + "\n"
+        
             level_up_message = colourize(level_up_message, "bright cyan")
             level_up_mastery_message = colourize(level_up_mastery_message, "bright magenta")
             
@@ -222,7 +222,7 @@ class Abilities:
     def learn_ability(self, ability_name, ability_type):
         if ability_name not in self.abilities:
             self.abilities[ability_name] = LearnedAbility(ability_name, ability_type)
-            return StudyMessages[random.randint(0, len(StudyMessages) - 1)]
+            return random.choice(StudyMessages) + "\n"
 
     def has_ability(self, ability_name):
         return ability_name in self.abilities

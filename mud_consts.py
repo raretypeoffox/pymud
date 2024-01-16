@@ -3,6 +3,7 @@
 from enum import Enum
 
 SERVER_LOG = "server_log.txt"
+MOTD_FILE = "config/motd.txt"
 
 Greeting = """
                         /\\
@@ -53,9 +54,6 @@ Greeting = """
 
 """
            
-           
-MOTD = """Message of the day!\n\n"""
-
 DIRECTIONS = ["north", "east", "south", "west", "up", "down"]
 DIRECTIONS_REVERSE = ["south", "west", "north", "east", "down", "up"]
 
@@ -263,4 +261,31 @@ class RoomSectorType(BaseEnum):
     DESERT = 10
     
     
+    
+# Just for Fun
 
+GOODBYE_MSGS = [
+  "As you dissolve into a shimmering mist, the realm whispers its farewells. Until the winds of adventure bring you back, traveler.",
+  "The ancient runes surrounding you glow softly, transporting you back to your realm. The world of legend awaits your return.",
+  "A mystical eagle appears, lifting you into the skies. Your journey pauses as the lands below bid you a silent goodbye.",
+  "With a wave of a wizard's staff, you fade from the land of myths. May your tales be told until you tread these paths again."
+]
+
+
+LOOK_SLEEPING_MSGS = [
+  "As you try to look around, the world remains a hazy blur, the ethereal shapes and shadows of your dreams obscuring reality. You're still gripped by sleep, unable to discern the world around you.",
+  "In your slumber, you reach out to observe your surroundings, but your senses are dulled by the tendrils of sleep. Vague images and indistinct sounds from your dream world mingle with reality, leaving you uncertain of what is real and what is not.",
+  "You attempt to look around, but your eyes refuse to open, heavy with the weight of sleep. The darkness behind your eyelids offers no view, only the distant echoes of dreams still playing in your mind.",
+  "Though you try to lift the veil of sleep to peek at your surroundings, the world outside remains elusive, hidden behind a fog of drowsiness. Your efforts to look are in vain, as you drift between consciousness and the realm of dreams.",
+  "In your half-asleep state, you struggle to focus on your environment, but the details slip away like shadows in the night. The gentle pull of sleep holds you captive, blurring the lines between the waking world and the landscapes of your dreams.",
+  "As you try to look around in your sleepy state, your mind wanders off, counting sheep. At sheep number 42, you realize you're still deep in the clutches of sleep, unable to perceive the world around you as the sheep continue their endless march through your dreams."
+]   
+
+NO_FIGHT_IN_SAFE_ROOM = [
+  "You fumble groggily with the scroll, but your drowsy mind cannot comprehend the mystical runes. The words blur before your eyes as you drift back into the comforting embrace of sleep, the knowledge of the scroll remaining just out of reach in your slumbering state.",
+  "As you prepare to strike, an invisible barrier of tranquility surrounds you, halting your actions. The sacred ground of this safe room negates all hostility, enforcing a peaceful coexistence.",
+  "Your muscles tense, ready for a fight, but the air in the safe room hums with a serene energy, dousing your combative spirit like water on a flame. Here, conflict finds no foothold.",
+  "You attempt to engage in combat, but a gentle yet firm force suppresses your aggressive intentions. In this sanctuary, peace reigns supreme, and all thoughts of violence are swiftly quelled.",
+  "Eyes narrowing, you move to attack, but the serene aura of the safe room envelopes you, soothing your rage. A whisper in your mind urges restraint, reminding you that this place is a refuge from strife.",
+  "As your hand balls into a fist, a soft, melodic chime fills the air, its vibrations easing the tension in your body. This safe room, a bastion of peace, allows no room for the chaos of battle." 
+]

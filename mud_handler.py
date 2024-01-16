@@ -1,35 +1,74 @@
 # mud_handler.py
 from datetime import datetime
 import pickle
+import random
 
 import mud_consts
 from mud_consts import RoomFlags
-from mud_comms import send_message, send_room_message, player_manager, handle_disconnection
-from mud_shared import colourize, is_NPC, report_mob_health, first_to_upper, log_error, search_items, check_flag
+from mud_comms import send_message, send_room_message, handle_disconnection
+from mud_shared import colourize, is_NPC, read_motd, first_to_upper, log_error, search_items, check_flag
 
 from mud_world import room_manager
-from mud_objects import player_db, combat_manager
+from mud_objects import player_db, player_manager, combat_manager
 from mud_combat import kill_mob, attempt_flee
 from mud_spells import do_cast
 from mud_socials import handle_social, list_socials
 from mud_abilities import ScrollsAndSpellbooks, AbilityType
 
-def kill_command(player, argument):
+
+def cast_command(player, argument):
+    do_cast(player, argument)
+    
+def chat_command(player, argument):
     if argument == '':
-        send_message(player, "You must specify a mob name.\n")
+        send_message(player, "It's easier to chat when you say something.\n")
+        return
+    
+    for other_player in player_manager.get_players():
+        if other_player != player and other_player.loggedin:
+            msg = colourize(f"{player.name} chats '{argument}'\n", "cyan")
+            send_message(other_player, f"{msg}")
+        elif other_player == player:
+            msg = colourize(f"You chat '{argument}'\n", "cyan")
+            send_message(player, msg)
+            
+def cmds_command(player, argument):
+    send_message(player, "Commands implemented:\n")
+    for cmds in commands:
+        send_message(player, f"{cmds}\n")
+        
+def drop_object(player, object):
+    # if object.is_droppable() == False:
+    # etc
+    
+    object.drop(player)
+    send_message(player, f"You drop {object.name}.\n")
+    send_room_message(player.current_room, f"{player.name} drops {object.name}.\n", excluded_player=player)
+    
+def drop_command(player, argument):
+    if argument == '':
+        send_message(player, "Drop what?\n")
         return
     
     current_position = player.character.get_position()
-    if current_position != "Stand":
-        send_message(player, "You need to be standing first!\n")
-        return 
+    if current_position == "Sleep":
+        send_message(player, "You are sleeping!\n")
+        return
     
-    mob = search_items(player.current_room.get_mobs(), argument)
-
-    if mob is None:
-        send_message(player, "No mob with that name found.\n")
-    else:
-        kill_mob(player, mob)
+    if argument.split()[0].lower() == 'all':
+        print("drop all")
+        for object in list(player.inventory_list.values())[::-1]:
+            print(object)
+            drop_object(player, object)
+        return
+    
+    object = search_items(player.get_objects(), argument)
+    
+    if object is None:
+        send_message(player, "No object with that name found.\n")
+        return
+    
+    drop_object(player, object)
 
 def flee_command(player, argument):
     if combat_manager.in_combat(player) == False:
@@ -53,44 +92,7 @@ def flee_command(player, argument):
         send_message(player, "You fail to flee!\n")
         send_message(player, colourize(player.character.flee_xp_loss(), "red"))
         pass  
-
-def cast_command(player, argument):
-    do_cast(player, argument)
-    
-def study_command(player, argument):
-    if player.character.is_awake() == False:
-        send_message(player, "You are sleeping!\n")
-        return
-    
-    if argument == '':
-        send_message(player, player.character.abilities.list_spells())
-        return
-    
-    object = search_items(player.get_objects(), argument.lower())
-        
-    if object is None:
-        send_message(player, "No scroll or spellbook with that name found.\n")
-        return
-
-    
-    if object.vnum in ScrollsAndSpellbooks:
-        spell_name = ScrollsAndSpellbooks[object.vnum]
-        if player.character.abilities.has_ability(spell_name):
-            send_message(player, f"You already know the spell {spell_name}.\n")
-            return
-        else:
-            study_msg = player.character.abilities.learn_ability(spell_name, AbilityType.SPELL) + "\n"
-            send_message(player, colourize(study_msg, "bright magenta"))
-            send_message(player, f"With a poof of smoke, {object.name} disappears!\n")
-            object.imp()
-            
-            
-    else:
-        send_message(player, "You can't study that.\n")
-        return
-    
-    
-    
+          
 def follow_command(player, argument):
     if player.character.is_awake() == False:
         send_message(player, "You are sleeping!\n")
@@ -120,46 +122,6 @@ def follow_command(player, argument):
     else:
         send_message(player, "There's no one here with that name.\n")
         return
-        
-    
-    
-def sleep_command(player, argument):
-    current_position = player.character.get_position()
-    if current_position == "Sleep":
-        send_message(player, "You are already sleeping.\n")
-        return
-    
-    if combat_manager.in_combat(player):
-        send_message(player, "You are fighting someone!!\n")
-        return
-    
-    send_room_message(player.current_room, colourize(f"{player.name} lies down and goes to sleep.\n", "green"), excluded_player=player, excluded_msg=colourize("You lie down and fall asleep.\n", "green"))
-    player.character.set_position("Sleep")
-    
-def stand_command(player, argument):
-    current_position = player.character.get_position()
-    if current_position == "Stand":
-        send_message(player, "You are already standing.\n")
-        return
-    
-    player.character.set_position("Stand")
-    send_room_message(player.current_room, colourize(f"{player.name} stands up, ready for adventure.\n", "green"), excluded_player=player, excluded_msg=colourize("You stand up.\n", "green"))
-    
-def rest_command(player, argument):
-    current_position = player.character.get_position()
-    if current_position == "Rest":
-        send_message(player, "You are already resting.\n")
-        return
-    
-    if combat_manager.in_combat(player):
-        send_message(player, "You are fighting someone!!\n")
-        return
-    
-    player.character.set_position("Rest")
-    send_room_message(player.current_room, colourize(f"{player.name} sits down and rests.\n", "green"), excluded_player=player, excluded_msg=colourize("You sit down and rest.\n", "green"))
-
-def inventory_command(player, argument):
-    send_message(player, player.get_inventory_description())
 
 def get_object(player, object):
     # if object.is_takeable() == False:
@@ -176,47 +138,6 @@ def get_object(player, object):
     object.pickup(player)
     send_message(player, f"You get {object.name}.\n")
     send_room_message(player.current_room, f"{player.name} gets {object.name}.\n", excluded_player=player)
-
-def drop_object(player, object):
-    # if object.is_droppable() == False:
-    # etc
-    
-    object.drop(player)
-    send_message(player, f"You drop {object.name}.\n")
-    send_room_message(player.current_room, f"{player.name} drops {object.name}.\n", excluded_player=player)
-
-
-def give_command(player, argument):
-    current_position = player.character.get_position()
-    if current_position == "Sleep":
-        send_message(player, "You are sleeping!\n")
-        return
-    
-    if argument == '':
-        send_message(player, "Give what?\n")
-        return
-    
-    argument = argument.lower().split()
-    
-    if len(argument) < 2:
-        send_message(player, "Give what to whom?\n")
-        return
-    
-    object = search_items(player.get_objects(), argument[0])
-        
-    if object is None:
-        send_message(player, "No item with that name found.\n")
-        return
-    
-    target = search_items((player.current_room.get_players() | player.current_room.get_mobs()), argument[1])
-    
-    if target is not None:
-        send_room_message(player.current_room, f"{player.name} gives {object.name} to {target.name}.\n", excluded_player=player, excluded_msg=f"You give {object.name} to {target.name}.\n")
-        object.give(player, target)
-    else:
-        send_message(player, "There's no one here with that name.\n")
-        return
-
 
 def get_command(player, argument):
     if argument == '':
@@ -247,104 +168,71 @@ def get_command(player, argument):
         
         get_object(player, object)
         
-def drop_command(player, argument):
-    if argument == '':
-        send_message(player, "Drop what?\n")
-        return
-    
+def give_command(player, argument):
     current_position = player.character.get_position()
     if current_position == "Sleep":
         send_message(player, "You are sleeping!\n")
         return
     
-    if argument.split()[0].lower() == 'all':
-        print("drop all")
-        for object in list(player.inventory_list.values())[::-1]:
-            print(object)
-            drop_object(player, object)
+    if argument == '':
+        send_message(player, "Give what?\n")
         return
     
-    object = search_items(player.get_objects(), argument)
+    argument = argument.lower().split()
     
+    if len(argument) < 2:
+        send_message(player, "Give what to whom?\n")
+        return
+    
+    object = search_items(player.get_objects(), argument[0])
+        
     if object is None:
-        send_message(player, "No object with that name found.\n")
+        send_message(player, "No item with that name found.\n")
         return
     
-    drop_object(player, object)
-
-def say_command(player, argument):
+    target = search_items((player.current_room.get_players() | player.current_room.get_mobs()), argument[1])
+    
+    if target is not None:
+        send_room_message(player.current_room, f"{player.name} gives {object.name} to {target.name}.\n", excluded_player=player, excluded_msg=f"You give {object.name} to {target.name}.\n")
+        object.give(player, target)
+    else:
+        send_message(player, "There's no one here with that name.\n")
+        return
+    
+def goto_command(player, argument):
     if argument == '':
-        send_message(player, "Say what??\n")
-        return
-    
-    if player.character.is_awake() == False:
-        send_message(player, colourize("You mumble something in your sleep.\n", "green"))
-        send_room_message(player.current_room, colourize(f"{player.name} mumbles something in their sleep.\n", "green"))
-        return
-    
-    msg = colourize(f"{player.name} says '{argument}'\n", "yellow")
-    excluded_msg = colourize(f"You say '{argument}'\n", "yellow")
-    send_room_message(player.current_room, msg, excluded_player=player, excluded_msg=excluded_msg)
-            
-def chat_command(player, argument):
+        send_message(player, "You must specify a room number.\n")
+    else:
+        room_id = int(argument)
+        room = room_manager.get(room_id)
+
+        if room is None:
+            send_message(player, "No room with that number found.\n")
+            return
+              
+        msg = colourize(f"{player.name} utters the word 'goto' and suddenly disappears!\n", "green")
+        excluded_msg = colourize("You feel a strange sensation as you are magically transported.\n", "green")
+        move_player(player, player.room_id, room_id, msg_to_room=msg, msg_to_player=excluded_msg)
+        
+def inventory_command(player, argument):
+    send_message(player, player.get_inventory_description())
+                 
+def kill_command(player, argument):
     if argument == '':
-        send_message(player, "It's easier to chat when you say something.\n")
+        send_message(player, "You must specify a mob name.\n")
         return
     
-    for other_player in player_manager.get_players():
-        if other_player != player and other_player.loggedin:
-            msg = colourize(f"{player.name} chats '{argument}'\n", "cyan")
-            send_message(other_player, f"{msg}")
-        elif other_player == player:
-            msg = colourize(f"You chat '{argument}'\n", "cyan")
-            send_message(player, msg)
+    current_position = player.character.get_position()
+    if current_position != "Stand":
+        send_message(player, "You need to be standing first!\n")
+        return 
+    
+    mob = search_items(player.current_room.get_mobs(), argument)
 
-def score_command(player, argument):
-    send_message(player, colourize(f"You are {player.name}, {player.character.origin}\n", "cyan"))
-    send_message(player, f"Level {player.character.level}, {player.character.race}\tEXP/TNL: {player.character.xp}/{player.character.tnl}\n")
-    send_message(player, colourize(f"-----------------------------------------------------------------------------\n", "yellow"))
-    send_message(player, f"Str\t:\t{player.character.str}\tYou have {player.character.current_hitpoints}/{player.character.max_hitpoints} hitpoints.\n")
-    send_message(player, f"Dex\t:\t{player.character.dex}\tYou have {player.character.current_mana}/{player.character.max_mana} mana.\n")
-    send_message(player, f"Con\t:\t{player.character.con}\tYou have {player.character.current_stamina}/{player.character.max_stamina} stamina.\n")
-    send_message(player, f"Int\t:\t{player.character.int}\n")
-    send_message(player, f"Wis\t:\t{player.character.wis}\n")
-    send_message(player, f"Cha\t:\t{player.character.cha}\n")
-    send_message(player, colourize(f"-----------------------------------------------------------------------------\n", "yellow"))   
-    
-         
-def who_command(player, argument):
-    send_message(player, colourize("Heroes...\n", "green"))
-    send_message(player, colourize("---------\n", "green"))
-    count = 0
-    for other_player in player_manager.get_players():
-        if other_player is None:
-            log_error("Who: other_player is None")
-            continue
-        if other_player.loggedin == False:
-            continue
-        if other_player.character.race == '':
-            log_error("Who: why are we here?")
-            continue
-        send_message(player, colourize(f"[{other_player.character.level : >4} {mud_consts.RACES_ABV[other_player.character.race]: <5}] {other_player.name} {other_player.get_title()}\n", "green"))
-        count += 1
-    send_message(player, colourize(f"\n{count} players online.\n", "green"))
-
-def title_command(player, argument):
-    if argument == '':
-        send_message(player, "title usage: title <title>, title reset\n")
-        return
-    
-    if argument.split()[0].lower() == 'reset':
-        player.title = "the" + player.character.origin
-        send_message(player, "Your title has been reset.\n")
-        return
-    
-    if len(argument) > 50:
-        send_message(player, "Your title cannot be longer than 50 characters.\n")
-        return
-
-    player.set_title(argument)
-    send_message(player, f"Your title is now: {player.get_title()}\n")
+    if mob is None:
+        send_message(player, "No mob with that name found.\n")
+    else:
+        kill_mob(player, mob)
 
 def last_command(player, argument):
     if argument == '':
@@ -379,13 +267,47 @@ def last_command(player, argument):
         
     send_message(player, f"created {formatted_created} and last logged in {formatted_lastlogin}\n")
 
-                   
-def quit_command(player, argument):
-    handle_disconnection(player, "Goodbye! Hope to see you soon...\n")
+def look_command(player, argument):
+    if is_NPC(player):
+        return
+    
+    if player.character.is_awake() == False:
+        send_message(player, colourize(random.choice(mud_consts.LOOK_SLEEPING_MSGS) + "\n", "green"))
+        return
+    
+    room = player.current_room
+    
+    if argument == '':
+    
+        if room is not None:
+            exit_names = "[Exits: " + room.get_exit_names() + "]"
+            send_message(player, f"{colourize(room.name,"yellow")}\n{exit_names}\n{room.description}")
+            
+            object_names = room.get_object_names()
+            if object_names != '':
+                send_message(player, f"{object_names}")
+            
+            player_names = room.get_player_names(excluded_player=player)
+            if player_names != '':
+                send_message(player, f"{player_names}")
+                
+            mob_names = room.get_mob_names()
+            if mob_names != '':
+                send_message(player, f"{mob_names}")
+    else:
+        # Create a list of all items in the room and in the player's inventory
+        all_items = (room.get_players() | player.get_objects() | room.get_mobs() | room.get_objects() | room.get_doors() | room.get_extended_descriptions())
 
-def save_command(player, argument):
-    player.save()
-    send_message(player, colourize("Player saved.\n", "green"))
+        # Search for the item in the list of all items
+        item = search_items(all_items, argument)
+        if item is not None:
+            send_message(player, f"{item.get_description()}\n")
+            return
+        
+        send_message(player, colourize("You don't see that here.\n", "green"))    
+
+def quit_command(player, argument):
+    handle_disconnection(player, colourize(random.choice(mud_consts.GOODBYE_MSGS) + "\n", "bright cyan"))
 
 def recall_command(player, argument):
     if player.character.is_awake() == False:
@@ -435,48 +357,40 @@ def recall_command(player, argument):
     else:
         send_message(player, "Available commands are 'recall', 'recall set', 'recall show' and 'recall clear'\n")
 
-def look_command(player, argument):
-    if is_NPC(player):
+def rest_command(player, argument):
+    current_position = player.character.get_position()
+    if current_position == "Rest":
+        send_message(player, "You are already resting.\n")
+        return
+    
+    if combat_manager.in_combat(player):
+        send_message(player, "You are fighting someone!!\n")
+        return
+    
+    player.character.set_position("Rest")
+    send_room_message(player.current_room, colourize(f"{player.name} sits down and rests.\n", "green"), excluded_player=player, excluded_msg=colourize("You sit down and rest.\n", "green"))
+
+def save_command(player, argument):
+    player.save()
+    send_message(player, colourize("Player saved.\n", "green"))
+
+def say_command(player, argument):
+    if argument == '':
+        send_message(player, "Say what??\n")
         return
     
     if player.character.is_awake() == False:
-        send_message(player, "You see 42 sheep dancing in your dreams.\n")
+        send_message(player, colourize("You mumble something in your sleep.\n", "green"))
+        send_room_message(player.current_room, colourize(f"{player.name} mumbles something in their sleep.\n", "green"))
         return
     
-    room = player.current_room
-    
-    if argument == '':
-    
-        if room is not None:
-            exit_names = "[Exits: " + room.get_exit_names() + "]"
-            send_message(player, f"{colourize(room.name,"yellow")}\n{exit_names}\n{room.description}")
-            
-            object_names = room.get_object_names()
-            if object_names != '':
-                send_message(player, f"{object_names}")
-            
-            player_names = room.get_player_names(excluded_player=player)
-            if player_names != '':
-                send_message(player, f"{player_names}")
-                
-            mob_names = room.get_mob_names()
-            if mob_names != '':
-                send_message(player, f"{mob_names}")
-    else:
-        # Create a list of all items in the room and in the player's inventory
-        all_items = (room.get_players() | player.get_objects() | room.get_mobs() | room.get_objects() | room.get_doors() | room.get_extended_descriptions())
-
-        # Search for the item in the list of all items
-        item = search_items(all_items, argument)
-        if item is not None:
-            send_message(player, f"{item.get_description()}\n")
-            return
-        
-        send_message(player, colourize("You don't see that here.\n", "green"))     
+    msg = colourize(f"{player.name} says '{argument}'\n", "yellow")
+    excluded_msg = colourize(f"You say '{argument}'\n", "yellow")
+    send_room_message(player.current_room, msg, excluded_player=player, excluded_msg=excluded_msg)
 
 def scan_command(player, argument):
     if player.character.is_awake() == False:
-        send_message(player, "You are sleeping!\n")
+        send_message(player, colourize(random.choice(mud_consts.LOOK_SLEEPING_MSGS) + "\n", "green"))
         return
     send_message(player, "You scan your surroundings...\n")
     scan_msg = player.current_room.scan(player)
@@ -485,9 +399,106 @@ def scan_command(player, argument):
     else:
         send_message(player, "... and you don't see anything.\n")
 
+def score_command(player, argument):
+    send_message(player, colourize(f"You are {player.name}, {player.character.origin}\n", "cyan"))
+    send_message(player, f"Level {player.character.level}, {player.character.race}\tEXP/TNL: {player.character.xp}/{player.character.tnl}\n")
+    send_message(player, colourize(f"-----------------------------------------------------------------------------\n", "yellow"))
+    send_message(player, f"Str\t:\t{player.character.str}\tYou have {player.character.current_hitpoints}/{player.character.max_hitpoints} hitpoints.\n")
+    send_message(player, f"Dex\t:\t{player.character.dex}\tYou have {player.character.current_mana}/{player.character.max_mana} mana.\n")
+    send_message(player, f"Con\t:\t{player.character.con}\tYou have {player.character.current_stamina}/{player.character.max_stamina} stamina.\n")
+    send_message(player, f"Int\t:\t{player.character.int}\n")
+    send_message(player, f"Wis\t:\t{player.character.wis}\n")
+    send_message(player, f"Cha\t:\t{player.character.cha}\n")
+    send_message(player, colourize(f"-----------------------------------------------------------------------------\n", "yellow"))   
+  
+def sleep_command(player, argument):
+    current_position = player.character.get_position()
+    if current_position == "Sleep":
+        send_message(player, "You are already sleeping.\n")
+        return
+    
+    if combat_manager.in_combat(player):
+        send_message(player, "You are fighting someone!!\n")
+        return
+    
+    send_room_message(player.current_room, colourize(f"{player.name} lies down and goes to sleep.\n", "green"), excluded_player=player, excluded_msg=colourize("You lie down and fall asleep.\n", "green"))
+    player.character.set_position("Sleep")
 
-def motd_command(player, argument):
-    send_message(player, mud_consts.MOTD)
+def stand_command(player, argument):
+    current_position = player.character.get_position()
+    if current_position == "Stand":
+        send_message(player, "You are already standing.\n")
+        return
+    
+    player.character.set_position("Stand")
+    send_room_message(player.current_room, colourize(f"{player.name} stands up, ready for adventure.\n", "green"), excluded_player=player, excluded_msg=colourize("You stand up.\n", "green"))
+    
+def study_command(player, argument):
+    if argument == '':
+        send_message(player, player.character.abilities.list_spells())
+        return
+
+    if player.character.is_awake() == False:
+        send_message(player, colourize("You fumble groggily with the scroll, but your drowsy mind cannot comprehend the mystical runes. The words blur before your eyes as you drift back into the comforting embrace of sleep, the knowledge of the scroll remaining just out of reach in your slumbering state.\n", "green"))
+        return
+    
+    object = search_items(player.get_objects(), argument.lower())
+        
+    if object is None:
+        send_message(player, "No scroll or spellbook with that name found.\n")
+        return
+
+    
+    if object.vnum in ScrollsAndSpellbooks:
+        spell_name = ScrollsAndSpellbooks[object.vnum]
+        if player.character.abilities.has_ability(spell_name):
+            send_message(player, f"You already know the spell {spell_name}.\n")
+            return
+        else:
+            study_msg = player.character.abilities.learn_ability(spell_name, AbilityType.SPELL) + "\n"
+            send_message(player, colourize(study_msg, "bright magenta"))
+            send_message(player, f"With a poof of smoke, {object.name} disappears!\n")
+            object.imp()
+            
+            
+    else:
+        send_message(player, "You can't study that.\n")
+        return 
+    
+def title_command(player, argument):
+    if argument == '':
+        send_message(player, "title usage: title <title>, title reset\n")
+        return
+    
+    if argument.split()[0].lower() == 'reset':
+        player.title = "the" + player.character.origin
+        send_message(player, "Your title has been reset.\n")
+        return
+    
+    if len(argument) > 50:
+        send_message(player, "Your title cannot be longer than 50 characters.\n")
+        return
+
+    player.set_title(argument)
+    send_message(player, f"Your title is now: {player.get_title()}\n")
+       
+def who_command(player, argument):
+    send_message(player, colourize("Heroes...\n", "green"))
+    send_message(player, colourize("---------\n", "green"))
+    count = 0
+    for other_player in player_manager.get_players():
+        if other_player is None:
+            log_error("Who: other_player is None")
+            continue
+        if other_player.loggedin == False:
+            continue
+        if other_player.character.race == '':
+            log_error("Who: why are we here?")
+            continue
+        send_message(player, colourize(f"[{other_player.character.level : >4} {mud_consts.RACES_ABV[other_player.character.race]: <5}] {other_player.name} {other_player.get_title()}\n", "green"))
+        count += 1
+    send_message(player, colourize(f"\n{count} players online.\n", "green"))
+
 
 def player_movement(player, direction):
     current_position = player.character.get_position()
@@ -517,22 +528,6 @@ def player_movement(player, direction):
                 send_message(player, "The door is locked.\n")
         else:
             send_message(player, "There is no exit that way.\n")
-            
-def goto_command(player, argument):
-    if argument == '':
-        send_message(player, "You must specify a room number.\n")
-    else:
-        room_id = int(argument)
-        room = room_manager.get(room_id)
-
-        if room is None:
-            send_message(player, "No room with that number found.\n")
-            return
-              
-        msg = colourize(f"{player.name} utters the word 'goto' and suddenly disappears!\n", "green")
-        excluded_msg = colourize("You feel a strange sensation as you are magically transported.\n", "green")
-        move_player(player, player.room_id, room_id, msg_to_room=msg, msg_to_player=excluded_msg)
-
 
 def north_command(player, argument):
     player_movement(player, 0)
@@ -552,10 +547,7 @@ def up_command(player, argument):
 def down_command(player, argument):
     player_movement(player, 5)
     
-def cmds_command(player, argument):
-    send_message(player, "Commands implemented:\n")
-    for cmds in commands:
-        send_message(player, f"{cmds}\n")                 
+              
 
 def test_command(player, argument):
     pass
@@ -576,7 +568,7 @@ commands = {
     'kill': [kill_command],
     'last': [last_command],
     'look': [look_command],
-    'motd': [motd_command],
+    'motd': [lambda player, argument: send_message(player, read_motd() + "\n")],
     'north': [north_command],
     'quit': [quit_command],
     'recall': [recall_command],
@@ -659,19 +651,13 @@ def handle_player(player, msg):
         else:   
             send_message(player, "I'm sorry, I don't understand you.\n")
             return
-    
-    
-    # could seperate socials into a seperate function / search
-    # that way it can be handled as one function that searches through many lists of poses etc
-        
         
 def move_player(player, old_room_vnum, new_room_vnum, msg_to_room=None, msg_to_player=None):
     """move player from old_room to new_room, use room vnums"""
     current_position = player.character.get_position()
     if current_position == "Sleep" or current_position == "Rest":
         return
-    
-    
+
     send_room_message(room_manager.get(old_room_vnum), msg_to_room, excluded_player=player, excluded_msg=msg_to_player)
     player.move_to_room(room_manager.get(new_room_vnum))
     look_command(player, "")
@@ -679,6 +665,6 @@ def move_player(player, old_room_vnum, new_room_vnum, msg_to_room=None, msg_to_p
     # check for aggie mob
     if player.character.NPC is not True:
         for mob in player.current_room.get_mobs():
-            if player in mob.aggro_list:
+            if player in mob.aggro_list and mob.current_room.flag(RoomFlags.SAFE) == False:
                 send_message(player, colourize(f"\n{first_to_upper(mob.name)} glares and snarls!\n", "bright red"))
                 kill_mob(mob, player)

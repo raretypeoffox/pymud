@@ -75,7 +75,13 @@ def colourize(text, flag):
         return f"{BRIGHT_WHITE}{text}{RESET}"
     else:
         return text
-    
+ 
+def read_motd():
+    try:
+        with open(mud_consts.MOTD_FILE, 'r') as file:
+            return file.read()
+    except FileNotFoundError:
+        return "Welcome to the MUD!\n"   
   
 def dice_roll(num, size, bonus):
     total = 0

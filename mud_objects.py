@@ -222,9 +222,6 @@ class ObjectDatabase:
 
         self.conn.commit()
 
-player_db = PlayerDatabase('player_database.db')
-object_db = ObjectDatabase('object_database.db')
-
 class KeyedEntityManager:
     def __init__(self):
         self.items = {}
@@ -352,19 +349,6 @@ class PlayerManager(KeyedEntityManager):
             
         return self.remove(player.socket)
 
-class PlayerConnection:
-    def __init__(self, player, socket, fd):
-        self.player = player
-        self.socket = socket
-        self.fd = fd
-        self.output_buffer = ""
-        
-        self.loggedin = False
-        self.reconnect_prompt = False
-        self.awaiting_reconnect_confirmation = False
-        self.awaiting_race = False
-        self.awaiting_origin = False
-
 class Player:
     def __init__(self, fd, socket):
         self.fd = fd
@@ -473,7 +457,7 @@ class Player:
         return self.character.hitroll
     
     def get_AC(self):
-        return self.character.ac
+        return self.character.get_AC()
     
     def add_inventory(self, obj_uuid):
         self.inventory.add(obj_uuid)
@@ -657,7 +641,7 @@ class Character:
         REGEN_MANA_RATE = self.max_mana / 4
         REGEN_STAMINA_RATE = self.max_stamina
         
-        if room.is_haven():
+        if room.flag(RoomFlags.HAVEN):
             REGEN_HP_RATE *= 2
             REGEN_MANA_RATE *= 2
             
@@ -791,9 +775,9 @@ class ObjectTemplate:
     def __init__(self, vnum):
         self.vnum = vnum
         self.keywords = ""
-        self.short_description = ""
-        self.long_description = ""
-        self.action_description = ""
+        self.short_desc = ""
+        self.long_desc = ""
+        self.action_desc = ""
         self.item_type = 0
         self.extra_flags = 0
         self.wear_flags = 0
@@ -968,9 +952,9 @@ class Room:
             msg += f"  {count_str} {first_to_upper(name)}\n"
                 
         return msg
-    
-    def is_haven(self):
-        return check_flag(self.room_flags, RoomFlags.HAVEN)
+
+    def flag(self, flag):
+        return check_flag(self.room_flags, flag)
 
 class Door:
     def __init__(self, door_number, door_description, keywords, locks, key, to_room):
@@ -999,81 +983,7 @@ class ExtendedDescription:
         return self.description 
 
 
-class ResetMob:
-    def __init__(self, mob_vnum, max_count, room_vnum, comment=""):
-        self.mob_vnum = mob_vnum
-        self.max_count = max_count
-        self.room_vnum = room_vnum
-        self.comment = comment
-        
-        self.equipment = Equipment()
-        self.inventory = []
-        
-    def add_item(self, item):
-        self.inventory.append(item)
-        
-class ResetObject:
-    def __init__(self, obj_vnum, room_vnum):
-        self.obj_vnum = obj_vnum
-        self.room_vnum = room_vnum
 
-
-class Resets:
-    def __init__(self):
-        self.mob_resets = []
-        self.object_resets = []
-        self.door_resets = []
-        self.randomize_doors_resets = []
-        
-        self.mob_repop_queue = set()
-        self.obj_repop_queue = set()
-        
-    def add_mob_reset(self, ResetMob):
-        self.mob_resets.append(ResetMob)
-        
-    def add_object_reset(self, ResetObject):
-        self.object_resets.append(ResetObject)
-        
-    def add_to_mob_repop_queue(self, mob_reset):
-        self.mob_repop_queue.add(mob_reset)
-        
-    def add_to_obj_repop_queue(self, obj_reset):
-        self.obj_repop_queue.add(obj_reset)
-        
-    def process_mob_repop_queue(self):
-        if len(self.mob_repop_queue) == 0:
-            return False
-        while self.mob_repop_queue:
-            mob_reset = self.mob_repop_queue.pop()
-            mob_template = mob_manager.get(mob_reset.mob_vnum)
-            room = room_manager.get(mob_reset.room_vnum)
-            MobInstance(mob_template, mob_reset, room)
-            
-            # todo
-            # for item in mob_reset.inventory:
-            #     mob.add_item(item)
-            # mob.mob_reset = mob_reset
-            # mob_reset.equipment = Equipment()
-            # for item in mob_reset.equipment:
-            #     mob_reset.equipment.equip(item)
-            # mob_reset.inventory = []
-            # mob_reset.comment = ""
-        return True
-    
-    def process_obj_repop_queue(self):
-        if len(self.mob_repop_queue) == 0 and len(self.obj_repop_queue) == 0:
-            return False
-        while self.obj_repop_queue:
-            obj_reset = self.obj_repop_queue.pop()
-            room = room_manager.get(obj_reset.room_vnum)
-            ObjectInstance(object_manager.get(obj_reset.obj_vnum), obj_reset=obj_reset, room=room)
-            # todo
-            # code for objects within containers
-        return True
-    
-    def process_repop_queue(self):
-        self.process_mob_repop_queue()
-        self.process_obj_repop_queue()
       
 class MobInstance:
     def __init__(self, template, mob_reset, room):
@@ -1152,7 +1062,7 @@ class MobInstance:
         return self.template.hitroll
     
     def get_AC(self):
-        return self.template.ac
+        return self.character.get_AC()
     
     def get_damroll(self):
         return self.template.damdice_num, self.template.damdice_size, self.template.damdice_bonus
@@ -1162,18 +1072,15 @@ class MobInstance:
         
         if random.uniform(0, 1) < 0.2 and self.aggro_list:
             self.aggro_list.pop()
-            
-
-        
 
 class ObjectInstance:
     def __init__(self, template, obj_reset=None, room=None, instance_uuid=None):
         self.template = template
         self.vnum = template.vnum
         self.uuid = instance_uuid if instance_uuid is not None else uuid.uuid1()
-        self.name = self.template.short_description
-        self.description = self.template.long_description
-        self.action_description = self.template.action_description
+        self.name = self.template.short_desc
+        self.description = self.template.long_desc
+        self.action_desc = self.template.action_desc
         
         self.state = ObjState.NORMAL
         self.insured = None # set to Player name if insured
@@ -1323,14 +1230,88 @@ class ObjectInstance:
         
         self.save()
         return True
-       
-    
+
     # for debugging
     def __str__(self):
         msg = f"{self.vnum} {self.name} {self.state}"
         msg += f" Location: {self.location_type} {self.location} {self.location_instance}"
         return msg
 
+class Resets:
+    def __init__(self):
+        self.mob_resets = []
+        self.object_resets = []
+        self.door_resets = []
+        self.randomize_doors_resets = []
+        
+        self.mob_repop_queue = set()
+        self.obj_repop_queue = set()
+        
+    def add_mob_reset(self, ResetMob):
+        self.mob_resets.append(ResetMob)
+        
+    def add_object_reset(self, ResetObject):
+        self.object_resets.append(ResetObject)
+        
+    def add_to_mob_repop_queue(self, mob_reset):
+        self.mob_repop_queue.add(mob_reset)
+        
+    def add_to_obj_repop_queue(self, obj_reset):
+        self.obj_repop_queue.add(obj_reset)
+        
+    def process_mob_repop_queue(self):
+        if len(self.mob_repop_queue) == 0:
+            return False
+        while self.mob_repop_queue:
+            mob_reset = self.mob_repop_queue.pop()
+            mob_template = mob_manager.get(mob_reset.mob_vnum)
+            room = room_manager.get(mob_reset.room_vnum)
+            MobInstance(mob_template, mob_reset, room)
+            
+            # todo
+            # for item in mob_reset.inventory:
+            #     mob.add_item(item)
+            # mob.mob_reset = mob_reset
+            # mob_reset.equipment = Equipment()
+            # for item in mob_reset.equipment:
+            #     mob_reset.equipment.equip(item)
+            # mob_reset.inventory = []
+            # mob_reset.comment = ""
+        return True
+    
+    def process_obj_repop_queue(self):
+        if len(self.mob_repop_queue) == 0 and len(self.obj_repop_queue) == 0:
+            return False
+        while self.obj_repop_queue:
+            obj_reset = self.obj_repop_queue.pop()
+            room = room_manager.get(obj_reset.room_vnum)
+            ObjectInstance(object_manager.get(obj_reset.obj_vnum), obj_reset=obj_reset, room=room)
+            # todo
+            # code for objects within containers
+        return True
+    
+    def process_repop_queue(self):
+        self.process_mob_repop_queue()
+        self.process_obj_repop_queue()
+
+class ResetMob:
+    def __init__(self, mob_vnum, max_count, room_vnum, comment=""):
+        self.mob_vnum = mob_vnum
+        self.max_count = max_count
+        self.room_vnum = room_vnum
+        self.comment = comment
+        
+        self.equipment = Equipment()
+        self.inventory = []
+        
+    def add_item(self, item):
+        self.inventory.append(item)
+        
+class ResetObject:
+    def __init__(self, obj_vnum, room_vnum):
+        self.obj_vnum = obj_vnum
+        self.room_vnum = room_vnum
+        
 class CombatManager:
     def __init__(self):
         self.combat_dict = {}
@@ -1387,8 +1368,6 @@ class CombatManager:
             self.end_combat(player, character)
             self.end_combat(character, player)
 
-
-    
     def get_characters_in_combat(self):
         return list(self.combat_dict.keys())
     
@@ -1401,16 +1380,25 @@ class CombatManager:
         else:
             return False
 
+# Init Global databases
+player_db = PlayerDatabase('player_database.db')
+object_db = ObjectDatabase('object_database.db')
 
+# Init Player Manager
+player_manager = PlayerManager()
+
+# Init Global template managers
 room_manager = KeyedEntityManager()
 mob_manager = KeyedEntityManager()
 object_manager = KeyedEntityManager()
 
-
+# Init Global reset manager
 reset_manager = Resets()
 
+# Init Global instance managers
 mob_instance_manager = MobInstanceManager()
 object_instance_manager = ObjectInstanceManager()
 
+# Init Global combat manager
 combat_manager = CombatManager()
 

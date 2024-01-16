@@ -3,8 +3,8 @@
 import time
 import random
 
-from mud_comms import  player_manager, send_room_message
-from mud_objects import mob_instance_manager, room_manager, object_instance_manager, reset_manager
+from mud_comms import send_room_message
+from mud_objects import player_manager, mob_instance_manager, room_manager, object_instance_manager, reset_manager
 from mud_shared import colourize, first_to_upper, log_error, log_info
 from mud_handler import player_movement
 import mud_consts
@@ -78,9 +78,7 @@ def tick_loop():
         
     player_manager.save_all_players()
     do_specials()
-    
-
-        
+     
 def mini_tick_loop():           
 
     # for non-sentinel mobs, small chance for them to move
@@ -88,9 +86,7 @@ def mini_tick_loop():
         if mob.template.check_if_move():
             door = mob.current_room.choose_random_door()
             player_movement(mob, door)
- 
-    
-    
+   
 def do_imp():
     # first imp all the items that were added in the previous long_tick
     if len(imp_manager.imp_list) > 0:

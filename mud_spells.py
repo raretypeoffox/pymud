@@ -1,9 +1,11 @@
 
 # mud_spells.py
-
+import random
 from dataclasses import dataclass
 from enum import Enum
 
+import mud_consts
+from mud_consts import RoomFlags
 from mud_comms import send_message
 from mud_shared import colourize, dice_roll, parse_argument, search_items, is_NPC, is_PC, log_error
 from mud_combat import deal_damage
@@ -162,6 +164,11 @@ def do_cast(caster, argument):
     # if spell.target_type == TargetType.CHAR_OFFENSIVE and combat_manager.in_combat(caster) is True and combat_manager.is_in_combat_with(caster, target) == False:
     #     send_message(caster, "Finish this fight first!\n")
     #     return
+    
+    if spell.target_type == TargetType.CHAR_OFFENSIVE or spell.target_type == TargetType.IGNORE:
+        if caster.current_room.flag(RoomFlags.SAFE):
+            send_message(caster, colourize(random.choice(mud_consts.NO_FIGHT_IN_SAFE_ROOM) + "\n", "bright white"))
+            return
     
     if not callable(spell.spell_func):
         log_error(f"Spell function for {spell.spell_name} is not callable!")
