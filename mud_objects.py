@@ -453,12 +453,6 @@ class Player:
     def get_prompt(self):
         return self.character.get_prompt()
     
-    def get_hitroll(self):
-        return self.character.hitroll
-    
-    def get_AC(self):
-        return self.character.get_AC()
-    
     def add_inventory(self, obj_uuid):
         self.inventory.add(obj_uuid)
         obj = object_instance_manager.get_object_by_uuid(obj_uuid)
@@ -1057,16 +1051,7 @@ class MobInstance:
     def remove_inventory(self, obj_uuid):
         self.inventory.remove(obj_uuid)
         del self.inventory_list[obj_uuid]
-        
-    def get_hitroll(self):
-        return self.template.hitroll
-    
-    def get_AC(self):
-        return self.character.get_AC()
-    
-    def get_damroll(self):
-        return self.template.damdice_num, self.template.damdice_size, self.template.damdice_bonus
-        
+      
     def tick(self):
         self.character.tick(self.current_room)
         

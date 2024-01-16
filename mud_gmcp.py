@@ -44,7 +44,7 @@ class PlayerGMCP:
         if self.player.loggedin is False:
             return
         status = {
-            'ac': self.player.get_AC(),
+            'ac': self.player.character.get_AC(),
             'alignment': self.player.character.alignment,
             'character_name': self.player.name,
             'class': "",
