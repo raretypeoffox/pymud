@@ -128,21 +128,26 @@ class AbilityType(Enum):
 
 
 class LearnedAbility:
-    def __init__(self, name, ability_type, level=1, experience=0):
+    def __init__(self, name, ability_type, level=1, sublevel=1, experience=0):
         self.name = name
         self.type = ability_type  # 'skill' or 'spell'
         self.level = level
+        self.sublevel = sublevel
         self.experience = experience
         self.is_locked = False  # Additional feature, for locking abilities under certain conditions
-
+            
     def gain_experience(self, amount):
         if not self.is_locked:
             self.experience += amount
             level_up_message = self.check_level_up()
 
-            # Calculate 20% of the experience required for the next level
+            # Calculate the sublevel based on the percentage of experience gained
             required_exp = self.calculate_required_exp()
-            if self.experience >= required_exp * 0.2:
+            new_sublevel = min(int(self.experience / required_exp * 5) + 1, 5)
+
+            # Check if the player has gained a new sublevel
+            if new_sublevel > self.sublevel:
+                self.sublevel = new_sublevel
                 return colourize(random.choice(SpellTingleMessages) + "\n", "bright magenta")
             else:
                 return level_up_message
@@ -153,6 +158,7 @@ class LearnedAbility:
         required_exp = self.calculate_required_exp()
         if self.experience >= required_exp:
             self.level += 1
+            self.sublevel = 1
             self.experience -= required_exp
             # Implement additional effects of leveling up (e.g., increase in power, new effects, etc.)
                 
@@ -181,15 +187,14 @@ class LearnedAbility:
             exp_level = SkillSpellLevels[self.level - 1][0]
         else:
             log_error(f"Unknown ability type {self.type} for ability {self.name}!")
-        
-        exp_pct = self.experience / self.calculate_required_exp()
-        
-        # Calculate the number of asterisks to add
-        num_asterisks = int(exp_pct * 5) + 1
-        
-        # Create a string with num_asterisks asterisks
-        asterisks = '*' * num_asterisks
-        
+
+        # HACK: this is a temporary fix to get the sublevel of a spell
+        if hasattr(self, 'sublevel') is False:
+            self.sublevel = min(int(self.experience / self.calculate_required_exp()* 5) + 1, 5)
+
+        # Calculate the number of asterisks based on the sublevel
+        asterisks = '*' * self.sublevel
+
         # Append the asterisks to exp_level
         # Use string formatting to align the asterisks
         exp_level += ' [{:<5}]'.format(asterisks)
@@ -201,19 +206,11 @@ class LearnedAbility:
         return ret_str
         
     def get_level(self):
-        # Calculate the required experience for the next level
-        required_exp = self.calculate_required_exp()
+        # HACK: this is a temporary fix to get the sublevel of a spell
+        if hasattr(self, 'sublevel') is False:
+            self.sublevel = min(int(self.experience / self.calculate_required_exp()* 5) + 1, 5)
 
-        # Calculate the sublevel
-        sublevel = self.experience // (required_exp * 0.2)
-
-        # Add 1 to sublevel because sublevel starts from 1
-        sublevel += 1
-
-        # Ensure sublevel is not greater than 5
-        sublevel = min(5, sublevel)
-
-        return self.level, int(sublevel)
+        return self.level, self.sublevel
         
 class Abilities:
     def __init__(self):

@@ -76,26 +76,26 @@ def colourize(text, flag):
     else:
         return text
  
-def read_motd():
+def read_motd() -> str:
     try:
         with open(mud_consts.MOTD_FILE, 'r') as file:
             return file.read()
     except FileNotFoundError:
         return "Welcome to the MUD!\n"   
   
-def dice_roll(num, size, bonus):
+def dice_roll(num: int, size: int, bonus: int) -> int:
     total = 0
     for i in range(num):
         total += random.randint(1, size)
     return total + bonus
 
-def random_percent():
+def random_percent() -> int:
     return round(random.uniform(0,1), 4)
 
 # Compile the regular expression once, faster performance per copilot
 ansi_color_code_re = re.compile(r'\033\[\d+m')
 
-def first_to_upper(s):
+def first_to_upper(s : str) -> str:
     # Split the string by the newline character
     lines = s.split('\n')
 
@@ -196,7 +196,7 @@ def process_search_output(number, matches):
     else:
         return None
     
-def search_items(items, keyword):
+def search_items(items: set, keyword: str) -> object:
     '''
     Searches for items that match the given keyword.
 

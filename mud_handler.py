@@ -14,6 +14,7 @@ from mud_combat import kill_mob, attempt_flee
 from mud_spells import do_cast
 from mud_socials import handle_social, list_socials
 from mud_abilities import ScrollsAndSpellbooks, AbilityType
+from mud_mprog import mprog_room_check
 
 
 def cast_command(player, argument):
@@ -668,3 +669,5 @@ def move_player(player, old_room_vnum, new_room_vnum, msg_to_room=None, msg_to_p
             if player in mob.aggro_list and mob.current_room.flag(RoomFlags.SAFE) == False:
                 send_message(player, colourize(f"\n{first_to_upper(mob.name)} glares and snarls!\n", "bright red"))
                 kill_mob(mob, player)
+    
+    mprog_room_check(player)

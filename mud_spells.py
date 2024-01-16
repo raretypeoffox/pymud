@@ -40,6 +40,21 @@ def spell_burning_hands(caster, target, spell):
         spell_msg += colourize(f"$A point$s at $D and a small flame shoots out, dealing {damage} damage!\n", "red")
         deal_damage(caster, mob, damage, spell_msg)
         spell_msg = ""
+        
+def spell_cure(caster, target, spell):
+    
+    level, sublevel = caster.character.abilities.get_level(spell.spell_name)
+    
+    num_dice = 4 + (caster.character.int - 10)
+    heal_dice = 3 + sublevel
+    healing_amount = dice_roll(num_dice, heal_dice, level**2)
+    
+    spell_msg = colourize(f"$A utter$s the words 'healing light'!\n", "green")
+    spell_msg += colourize(f"A warm, soothing light envelops $D, healing their wounds and restoring {healing_amount} health!\n", "bright_green")
+
+    target.character.regen_hp(healing_amount)
+
+    
 
 class TargetType(Enum):
     IGNORE = 1 # Spell chooses its own targets.
@@ -49,7 +64,7 @@ class TargetType(Enum):
     OBJ_INV = 5 # Spell is used on an object.
  
 @dataclass
-class Spell:
+class Spell():
     spell_name: str
     spell_func: callable
     min_cast_level: int
@@ -64,6 +79,7 @@ class Spell:
 SPELLS = {
     "magic missile": Spell("magic missile", spell_magic_missile, 1, TargetType.CHAR_OFFENSIVE, True, False, 30, 5, "magic missile", ""),
     "burning hands": Spell("burning hands", spell_burning_hands, 1, TargetType.IGNORE, True, False, 30, 5, "burning hands", ""),
+    "cure": Spell("cure", spell_cure, 1, TargetType.CHAR_DEFENSIVE, True, True, 50, 5, "cure", ""),
 }    
 
 # TODO: will be used to say the spell name and target

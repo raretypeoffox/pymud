@@ -127,7 +127,7 @@ class ObjectDatabase:
                 vnum INTEGER,
                 name TEXT,
                 description TEXT,
-                action_description TEXT,
+                action_desc TEXT,
                 state INTEGER,
                 insured TEXT,
                 location TEXT,
@@ -146,7 +146,7 @@ class ObjectDatabase:
             obj.vnum,
             obj.name,
             obj.description,
-            obj.action_description,
+            obj.action_desc,
             obj.state.value,
             obj.insured,
             obj.location,
@@ -163,7 +163,7 @@ class ObjectDatabase:
             log_error("Object DB Error: Database connection is not open")
             return
 
-        data = [(str(obj.uuid), obj.vnum, obj.name, obj.description, obj.action_description, obj.state.value, obj.insured, obj.location, obj.location_type, obj.max_hitpoints, obj.current_hitpoints, json.dumps(obj.enchantments)) for obj in objects]
+        data = [(str(obj.uuid), obj.vnum, obj.name, obj.description, obj.action_desc, obj.state.value, obj.insured, obj.location, obj.location_type, obj.max_hitpoints, obj.current_hitpoints, json.dumps(obj.enchantments)) for obj in objects]
 
         self.cursor.executemany("""
             INSERT OR REPLACE INTO objects VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -195,7 +195,7 @@ class ObjectDatabase:
             if row[3] is not None:
                 obj.description = row[3]
             if row[4] is not None:
-                obj.action_description = row[4]
+                obj.action_desc = row[4]
             obj.state = ObjState(row[5])
             obj.insured = row[6]
             obj.location = row[7]
@@ -297,21 +297,21 @@ class ObjectInstanceManager(InstanceManager):
                     continue
                 
                 # if an object's descriptions are the same as the template, set them to None
-                if obj.name == obj.template.short_description:
+                if obj.name == obj.template.short_desc:
                     obj.name = None
-                if obj.description == obj.template.long_description:
-                    obj.description = None
-                if obj.action_description == obj.template.action_description:
-                    obj.action_description = None
+                if obj.desc == obj.template.long_desc:
+                    obj.desc = None
+                if obj.action_desc== obj.template.action_desc:
+                    obj.action_desc = None
                 
                 objects.append(obj)
                 
                 if obj.name is None:
-                    obj.name = obj.template.short_description
-                if obj.description is None:
-                    obj.description = obj.template.long_description
-                if obj.action_description is None:
-                    obj.action_description = obj.template.action_description
+                    obj.name = obj.template.short_desc
+                if obj.desc is None:
+                    obj.desc = obj.template.long_desc
+                if obj.action_desc is None:
+                    obj.action_desc = obj.template.action_desc
  
         object_db.save_objects(objects)
         log_info(f"Saved {len(objects)} objects in {time.time() - start_time:.2f} seconds")
@@ -713,7 +713,7 @@ class Equipment:
         if self.get_equipped_items():
             msg = ""
             for item in self.get_equipped_items():
-                msg += colourize(f"{mud_consts.EQ_SLOTS[int(item.template.wear_flags)]: <20}{item.template.short_description}\n", "yellow")
+                msg += colourize(f"{mud_consts.EQ_SLOTS[int(item.template.wear_flags)]: <20}{item.template.short_desc}\n", "yellow")
             return msg
         else:
             return None
@@ -1079,7 +1079,7 @@ class ObjectInstance:
         self.vnum = template.vnum
         self.uuid = instance_uuid if instance_uuid is not None else uuid.uuid1()
         self.name = self.template.short_desc
-        self.description = self.template.long_desc
+        self.desc = self.template.long_desc
         self.action_desc = self.template.action_desc
         
         self.state = ObjState.NORMAL
@@ -1164,9 +1164,9 @@ class ObjectInstance:
         description.append(self.description)
         return "\n".join(description)  
     
-    def get_action_description(self):
+    def get_action_desc(self):
         description = []
-        description.append(self.action_description)
+        description.append(self.action_desc)
         return "\n".join(description)
     
     def pickup(self, player):

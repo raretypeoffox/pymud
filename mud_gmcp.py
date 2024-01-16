@@ -25,7 +25,6 @@ TELNET_GMCP_MSG_END = TELNET_IAC + TELNET_SE
 class PlayerGMCP:
     def __init__(self, player):
         self.player = player
-        self.character = player.character
         self.output_queue = queue.Queue()
         self.gmcp = True
         
@@ -46,39 +45,39 @@ class PlayerGMCP:
             return
         status = {
             'ac': self.player.get_AC(),
-            'alignment': self.character.alignment,
+            'alignment': self.player.character.alignment,
             'character_name': self.player.name,
             'class': "",
-            'con': self.character.con,
-            'dex': self.character.dex,
-            'experience_tnl': self.character.tnl - self.character.xp,
-            'experience_tnl_max': self.character.tnl,
-            'gold': self.character.gold,
-            'health': self.character.current_hitpoints,
-            'health_max': self.character.max_hitpoints,
+            'con': self.player.character.con,
+            'dex': self.player.character.dex,
+            'experience_tnl': self.player.character.tnl - self.player.character.xp,
+            'experience_tnl_max': self.player.character.tnl,
+            'gold': self.player.character.gold,
+            'health': self.player.character.current_hitpoints,
+            'health_max': self.player.character.max_hitpoints,
             'hitroll': self.player.get_hitroll(),
-            'int': self.character.int,
-            'level': self.character.level,
-            'mana': self.character.current_mana,
-            'mana_max': self.character.max_mana,
+            'int': self.player.character.int,
+            'level': self.player.character.level,
+            'mana': self.player.character.current_mana,
+            'mana_max': self.player.character.max_mana,
             # 'opponent_name'
-            'race': self.character.race,
+            'race': self.player.character.race,
             # 'room_exits': self.current_room.get_exit_names(),
             'room_name': self.player.current_room.name,
-            'str': self.character.str,
-            'wis': self.character.wis
+            'str': self.player.character.str,
+            'wis': self.player.character.wis
         }
         self.queue_message("Char", "Status", status)
     
         vitals = {
-            'hp': self.character.current_hitpoints,
-            'maxhp': self.character.max_hitpoints,
-            'mp': self.character.current_mana,
-            'maxmp': self.character.max_mana,
-            'stamina': self.character.current_stamina,
-            'maxstamina': self.character.max_stamina,
-            'tnl': self.character.tnl - self.character.xp,
-            'tnlmax': self.character.tnl
+            'hp': self.player.character.current_hitpoints,
+            'maxhp': self.player.character.max_hitpoints,
+            'mp': self.player.character.current_mana,
+            'maxmp': self.player.character.max_mana,
+            'stamina': self.player.character.current_stamina,
+            'maxstamina': self.player.character.max_stamina,
+            'tnl': self.player.character.tnl - self.player.character.xp,
+            'tnlmax': self.player.character.tnl
         }
         self.queue_message("Char", "Vitals", vitals)
            
