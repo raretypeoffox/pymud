@@ -45,7 +45,7 @@ class PlayerDatabase:
             
             player_name = player.name.lower()
             character_data = pickle.dumps(player.character)
-            inventory_data = json.dumps([str(i) for i in player.inventory.inventory_uuids])
+            inventory_data = json.dumps([str(i) for i in player.inventory.uuids])
             equipment_data = pickle.dumps(player.equipment)
             # abilities_data = pickle.dumps(player.abilities)
             abilities_data = None
@@ -385,6 +385,9 @@ class Player:
         self.created = datetime.now()
         self.lastlogin = datetime.now()
         self.title = ""
+        
+        # local reference to the object instance manager
+        self.object_instance_manager = object_instance_manager
 
     def save(self):
         player_db.save_player(self)
@@ -399,11 +402,9 @@ class Player:
         self.created = player_data['created']
         self.lastlogin = datetime.now()
         self.title = player_data['title']
-        self.inventory.inventory_uuids = player_data['inventory']
+        self.inventory.uuids = player_data['inventory']
         self.character = player_data['character']
-        
-        self.inventory.load()
-        
+
         return True
         
     def save_exists(self):
@@ -434,11 +435,29 @@ class Player:
         if equipped:
             description.append("They are wearing:")
             description.append(equipped)
-        inventory_desc = self.inventory.get_description(char_name=self.name)
-        if inventory_desc != "":
-            description.append(inventory_desc)
-
+        if len(self.inventory.get_all()) > 0:
+            description.append("You peek into their inventory:")
+            description.append(self.get_inventory_description())
         return "\n".join(description)
+    
+    def get_inventory_description(self):        
+        inventory_items = {}
+        msg = ""
+        for uuid in self.inventory.get_all():
+            obj = object_instance_manager.get_object_by_uuid(uuid)
+            if obj.name in inventory_items:
+                inventory_items[obj.name] += 1
+            else:
+                inventory_items[obj.name] = 1
+
+        for name, count in inventory_items.items():
+            count_str = f"({count:2})" if count > 1 else "     "
+            msg += f"  {count_str} {name}\n"
+                
+        return msg
+    
+    def get_objects(self):
+        return {self.object_instance_manager.get_object_by_uuid(uuid) for uuid in self.inventory.get_all()}
     
     def get_title(self):
         if self.title == "":
@@ -632,58 +651,16 @@ class Character:
 
 class Inventory:
     def __init__(self):
-        self.inventory_uuids = set() # set of object UUIDs (saved)
-        self.inventory_list = {} # key: UUID, value: ObjectInstance (not saved)
+        self.uuids = set() # set of object UUIDs (saved)
 
     def add(self, object):
-        self.inventory_uuids.add(object.uuid)
-        self.inventory_list[object.uuid] = object
+        self.uuids.add(object.uuid)
         
     def remove(self, object):
-        self.inventory_uuids.remove(object.uuid)
-        del self.inventory_list[object.uuid]
+        self.uuids.remove(object.uuid)
         
     def get_all(self):
-        return set(self.inventory_list.values())
-    
-    def load(self):
-        for uuid in self.inventory_uuids:
-            obj = object_instance_manager.get_object_by_uuid(uuid)
-            if obj is not None:
-                self.inventory_list[uuid] = obj
-                
-    def get_description(self, char_name=None):
-        if char_name is None:
-            if len(self.inventory_list) == 0:
-                return "You are not carrying anything.\n"    
-            msg = "You are carrying:\n"
-        else:
-            if len(self.inventory_list) == 0:
-                return f"{char_name} is not carrying anything.\n"
-            msg = f"{char_name} is carrying:\n"
-        
-        inventory_items = {}
-        for obj in self.get_all():
-            if obj.name in inventory_items:
-                inventory_items[obj.name] += 1
-            else:
-                inventory_items[obj.name] = 1
-
-        for name, count in inventory_items.items():
-            count_str = f"({count:2})" if count > 1 else "     "
-            msg += f"  {count_str} {name}\n"
-                
-        return msg
-    
-    def __str__(self): # for debugging
-        ret_str = "Inventory UUIDs:\n"
-        for uuid in self.inventory_uuids:
-            ret_str += "UUID:\t" + str(uuid) + "\n"
-
-        print("\nInventory List:")
-        for key, value in self.inventory_list.items():
-            ret_str +=  f"Key: {key}, Value: {value}\n"
-        return ret_str
+        return self.uuids
    
 class Equipment:
     def __init__(self):
@@ -1038,6 +1015,9 @@ class MobInstance:
         
     def get_keywords(self):
         return self.template.keywords.split()
+    
+    def get_objects(self):
+        return {self.object_instance_manager.get_object_by_uuid(uuid) for uuid in self.inventory.get_all()}
 
     def set_room(self, room):
         self.current_room = room
@@ -1058,11 +1038,27 @@ class MobInstance:
             description.append("They are wearing:")
             description.append(equipped)
             
-        inventory_desc = self.inventory.get_description(char_name=first_to_upper(self.name))
-        if inventory_desc != "":
-            description.append(inventory_desc)
+        if len(self.inventory.get_all()) > 0:
+            description.append("You peek into their inventory:")
+            description.append(self.get_inventory_description())
 
         return "\n".join(description) + "\n"
+    
+    def get_inventory_description(self):        
+        inventory_items = {}
+        msg = ""
+        for uuid in self.inventory.get_all():
+            obj = object_instance_manager.get_object_by_uuid(uuid)
+            if obj.name in inventory_items:
+                inventory_items[obj.name] += 1
+            else:
+                inventory_items[obj.name] = 1
+
+        for name, count in inventory_items.items():
+            count_str = f"({count:2})" if count > 1 else "     "
+            msg += f"  {count_str} {name}\n"
+                
+        return msg
       
     def tick(self):
         self.character.tick(self.current_room)
@@ -1189,7 +1185,7 @@ class ObjectInstance:
     def drop(self, player):
         # todo code to check for no drop flag
         
-        if self.uuid not in player.inventory.inventory_uuids:
+        if self.uuid not in player.inventory.uuids:
             log_error(f"Object drop: object {self.vnum}, {self.name} not in {player.name} inventory")
             return False
         
@@ -1206,7 +1202,7 @@ class ObjectInstance:
         return True
      
     def give(self, player, target):
-        if self.uuid not in player.inventory.inventory_uuids:
+        if self.uuid not in player.inventory.uuids:
             log_error(f"Object give: object {self.vnum}, {self.name} not in {player.name} inventory")
             return False
         

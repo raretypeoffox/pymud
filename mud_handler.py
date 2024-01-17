@@ -58,12 +58,12 @@ def drop_command(player, argument):
     
     if argument.split()[0].lower() == 'all':
         print("drop all")
-        for object in list(player.inventory_list.values())[::-1]:
+        for object in list(player.get_objects())[::-1]:
             print(object)
             drop_object(player, object)
         return
     
-    object = search_items(player.inventory.get_all(), argument)
+    object = search_items(player.get_objects(), argument)
     
     if object is None:
         send_message(player, "No object with that name found.\n")
@@ -185,7 +185,7 @@ def give_command(player, argument):
         send_message(player, "Give what to whom?\n")
         return
     
-    object = search_items(player.inventory.get_all(), argument[0])
+    object = search_items(player.get_objects(), argument[0])
         
     if object is None:
         send_message(player, "No item with that name found.\n")
@@ -216,7 +216,13 @@ def goto_command(player, argument):
         move_player(player, player.room_id, room_id, msg_to_room=msg, msg_to_player=excluded_msg)
         
 def inventory_command(player, argument):
-    send_message(player, player.inventory.get_description())
+    if len(player.inventory.uuids) == 0:
+        send_message(player, "You are not carrying anything.\n")
+        return
+    
+    msg = "You are carrying:\n"
+    msg += player.get_inventory_description()
+    send_message(player, msg)
                  
 def kill_command(player, argument):
     if argument == '':
@@ -297,7 +303,7 @@ def look_command(player, argument):
                 send_message(player, f"{mob_names}")
     else:
         # Create a list of all items in the room and in the player's inventory
-        all_items = (room.get_players() | player.inventory.get_all() | room.get_mobs() | room.get_objects() | room.get_doors() | room.get_extended_descriptions())
+        all_items = (room.get_players() | player.get_objects() | room.get_mobs() | room.get_objects() | room.get_doors() | room.get_extended_descriptions())
 
         # Search for the item in the list of all items
         item = search_items(all_items, argument)
@@ -443,7 +449,7 @@ def study_command(player, argument):
         send_message(player, colourize("You fumble groggily with the scroll, but your drowsy mind cannot comprehend the mystical runes. The words blur before your eyes as you drift back into the comforting embrace of sleep, the knowledge of the scroll remaining just out of reach in your slumbering state.\n", "green"))
         return
     
-    object = search_items(player.inventory.get_all(), argument.lower())
+    object = search_items(player.get_objects(), argument.lower())
         
     if object is None:
         send_message(player, "No scroll or spellbook with that name found.\n")

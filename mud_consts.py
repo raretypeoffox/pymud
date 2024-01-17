@@ -287,6 +287,8 @@ LOOK_SLEEPING_MSGS = [
   "In your dreams, you wander through an ethereal forest, where the trees are made of starlight and the ground sparkles like diamonds. You try to look around, but the scenery shifts and swirls, forever just out of reach.",
   "You find yourself in a grand, opulent ballroom, filled with masked dancers twirling in an endless waltz. You try to focus on their faces, but they blur and merge into one another, creating a mesmerizing but elusive spectacle.",
   "You are floating on a gentle river, the water clear as crystal, reflecting a sky filled with two moons. As you try to look around, the river carries you through changing landscapes, from lush jungles to snow-capped mountains, all blending seamlessly into each other."
+  "You stand at the edge of a vast desert, the sands shifting colors from deep reds to golden yellows under a setting sun. As you try to look around, mirages form on the horizon, showing visions of ancient cities and forgotten civilizations, disappearing as quickly as they appear.",
+  "You're soaring high above the clouds, the wind rushing past as you glide on magnificent, ethereal wings. You attempt to look down at the world below, but it shifts between fantastical landscapes - floating islands, towering castles, and mysterious, deep forests."
 ]   
 
 NO_FIGHT_IN_SAFE_ROOM = [

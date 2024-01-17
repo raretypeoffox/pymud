@@ -6,6 +6,7 @@ test.py
 player_database.db
 user_database.db
 rob_problem_set_xp.py
+db_operations.py
 
 __pycache__/
 .VSCodeCounter/
