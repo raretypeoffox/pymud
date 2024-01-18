@@ -4,9 +4,9 @@ import pickle
 import random
 
 import mud_consts
-from mud_consts import RoomFlags
+from mud_consts import RoomFlags, ObjLocationType
 from mud_comms import send_message, send_room_message, handle_disconnection
-from mud_shared import colourize, is_NPC, read_motd, first_to_upper, log_error, search_items, check_flag
+from mud_shared import colourize, is_NPC, read_motd, first_to_upper, log_error, search_items, check_flag, parse_argument
 
 from mud_world import room_manager
 from mud_objects import player_db, player_manager, combat_manager
@@ -38,7 +38,7 @@ def cmds_command(player, argument):
     for cmds in commands:
         send_message(player, f"{cmds}\n")
         
-def drop_object(player, object):
+def drop_object(player, object, target=None):
     # if object.is_droppable() == False:
     # etc
     
@@ -47,29 +47,15 @@ def drop_object(player, object):
     send_room_message(player.current_room, f"{player.name} drops {object.name}.\n", excluded_player=player)
     
 def drop_command(player, argument):
-    if argument == '':
-        send_message(player, "Drop what?\n")
-        return
-    
-    current_position = player.character.get_position()
-    if current_position == "Sleep":
+    if player.character.get_position() == "Sleep":
         send_message(player, "You are sleeping!\n")
         return
     
-    if argument.split()[0].lower() == 'all':
-        print("drop all")
-        for object in list(player.get_objects())[::-1]:
-            print(object)
-            drop_object(player, object)
+    if not argument:
+        send_message(player, "Drop what?\n")
         return
-    
-    object = search_items(player.get_objects(), argument)
-    
-    if object is None:
-        send_message(player, "No object with that name found.\n")
-        return
-    
-    drop_object(player, object)
+
+    process_items(player, None, argument, drop_object, player.get_objects())
 
 def flee_command(player, argument):
     if combat_manager.in_combat(player) == False:
@@ -124,10 +110,10 @@ def follow_command(player, argument):
         send_message(player, "There's no one here with that name.\n")
         return
 
-def get_object(player, object):
-    # if object.is_takeable() == False:
-    #     send_message(player, "You can't take that.\n")
-    #     return
+def get_object(player, object, target=None):
+    if object.is_takeable() == False:
+         send_message(player, "You can't take that.\n")
+         return
     
     # if player.character.is_carrying(object):
     #     send_message(player, "You are already carrying that.\n")
@@ -141,64 +127,43 @@ def get_object(player, object):
     send_room_message(player.current_room, f"{player.name} gets {object.name}.\n", excluded_player=player)
 
 def get_command(player, argument):
-    if argument == '':
+    if player.character.get_position() == "Sleep":
+        send_message(player, "You are sleeping!\n")
+        return
+    
+    if not argument:
         send_message(player, "Get what?\n")
         return
     
-    current_position = player.character.get_position()
-    if current_position == "Sleep":
-        send_message(player, "You are sleeping!\n")
-        return
-    
-    if len(argument.split()) > 1:
-        # todo, implement bags
-        pass
-
+    item_name, target_name = parse_argument(argument.lower())
+    target = search_items((player.get_containers() | player.current_room.get_containers()), target_name)
+    if target_name is not None:
+        process_items(player, target, item_name, get_object, target.get_objects())
     else: # picking up from ground
-        if argument.split()[0].lower() == 'all':
-            # todo add functionality for "you get several items"
-            for object in set(player.current_room.object_list):
-                get_object(player, object)
-            return
+        process_items(player, None, item_name, get_object, player.current_room.get_objects())       
+   
 
-        object = search_items(player.current_room.get_objects(), argument)
-        
-        if object is None:
-            send_message(player, "No item with that name found.\n")
-            return
-        
-        get_object(player, object)
+def give_object(player, object, target):
+    send_room_message(player.current_room, f"{player.name} gives {object.name} to {target.name}.\n", excluded_player=player, excluded_msg=f"You give {object.name} to {target.name}.\n")
+    object.give(player, target)   
         
 def give_command(player, argument):
-    current_position = player.character.get_position()
-    if current_position == "Sleep":
+    if player.character.get_position() == "Sleep":
         send_message(player, "You are sleeping!\n")
         return
     
-    if argument == '':
+    if not argument:
         send_message(player, "Give what?\n")
         return
     
-    argument = argument.lower().split()
-    
-    if len(argument) < 2:
-        send_message(player, "Give what to whom?\n")
-        return
-    
-    object = search_items(player.get_objects(), argument[0])
-        
-    if object is None:
-        send_message(player, "No item with that name found.\n")
-        return
-    
-    target = search_items((player.current_room.get_players() | player.current_room.get_mobs()), argument[1])
-    
-    if target is not None:
-        send_room_message(player.current_room, f"{player.name} gives {object.name} to {target.name}.\n", excluded_player=player, excluded_msg=f"You give {object.name} to {target.name}.\n")
-        object.give(player, target)
-    else:
+    item_name, target_name = parse_argument(argument.lower())
+    target = search_items((player.current_room.get_players() | player.current_room.get_mobs()), target_name)
+    if target is None:
         send_message(player, "There's no one here with that name.\n")
         return
+    process_items(player, target, item_name, give_object, player.get_objects())
+
+
     
 def goto_command(player, argument):
     if argument == '':
@@ -284,11 +249,10 @@ def look_command(player, argument):
     
     room = player.current_room
     
-    if argument == '':
-    
+    if argument == '': # standard look around the room
         if room is not None:
             exit_names = "[Exits: " + room.get_exit_names() + "]"
-            send_message(player, f"{colourize(room.name,"yellow")}\n{exit_names}\n{room.description}")
+            send_message(player, f"{colourize(room.name,"yellow")}\n{exit_names}\n{room.description}\n")
             
             object_names = room.get_object_names()
             if object_names != '':
@@ -301,17 +265,74 @@ def look_command(player, argument):
             mob_names = room.get_mob_names()
             if mob_names != '':
                 send_message(player, f"{mob_names}")
-    else:
-        # Create a list of all items in the room and in the player's inventory
-        all_items = (room.get_players() | player.get_objects() | room.get_mobs() | room.get_objects() | room.get_doors() | room.get_extended_descriptions())
-
-        # Search for the item in the list of all items
-        item = search_items(all_items, argument)
-        if item is not None:
-            send_message(player, f"{item.get_description()}\n")
+                
+            send_message(player, "\n")
+            return
+    
+    if argument.split()[0].lower() == 'in':
+        if len(argument.split()) < 2:
+            send_message(player, "Look in what?\n")
             return
         
-        send_message(player, colourize("You don't see that here.\n", "green"))    
+        keyword = argument.split()[1]
+        
+        object = search_items(room.get_containers() | player.get_containers(), keyword)
+        
+        if object is None:
+            send_message(player, "No object with that name found.\n")
+            return
+        
+        # if object.state == ObjState.CLOSED:
+        #     send_message(player, "It's closed.\n")
+        #     return
+        
+        # if object.state == ObjState.OPEN:
+        #     if len(object.uuids) == 0:
+        #         send_message(player, "It's empty.\n")
+        #         return
+            
+        msg = f"You look in {object.name} and see:\n"
+        msg += object.get_inventory_description()
+        send_message(player, msg)
+        return    
+    
+    
+    
+    
+    # Create a list of all items in the room and in the player's inventory
+    all_items = (room.get_players() | player.get_objects() | room.get_mobs() | room.get_objects() | room.get_doors() | room.get_extended_descriptions())
+
+    # Search for the item in the list of all items
+    item = search_items(all_items, argument)
+    if item is not None:
+        send_message(player, f"{item.get_description()}\n")
+        return
+    
+    send_message(player, colourize("You don't see that here.\n", "green"))    
+
+def put_object(player, object, target):    
+    object.put(player, target)
+    send_message(player, f"You put {object.name} in {target.name}.\n")
+    send_room_message(player.current_room, f"{player.name} puts {object.name} in {target.name}.\n", excluded_player=player)
+
+
+def put_command(player, argument):
+    if player.character.get_position() == "Sleep":
+        send_message(player, "You are sleeping!\n")
+        return
+    
+    if not argument:
+        send_message(player, "Put what?\n")
+        return
+    
+    item_name, target_name = parse_argument(argument.lower())
+    target = search_items((player.get_containers() | player.current_room.get_containers()), target_name)
+    
+    if target is None:
+        send_message(player, "Put it where?\n")
+
+    process_items(player, target, item_name, put_object, player.get_objects())
+        
 
 def quit_command(player, argument):
     handle_disconnection(player, colourize(random.choice(mud_consts.GOODBYE_MSGS) + "\n", "bright cyan"))
@@ -506,6 +527,29 @@ def who_command(player, argument):
         count += 1
     send_message(player, colourize(f"\n{count} players online.\n", "green"))
 
+def wield_command(player, argument):
+    if player.character.get_position() == "Sleep":
+        send_message(player, "You dream of wield something, unfortunately you're still lying in your bed.\n")
+        return
+    
+    if argument == '':
+        send_message(player, "Wield what?\n")
+        return
+    
+    item_name, _ = parse_argument(argument.lower())
+    
+    object = search_items(player.get_objects(), item_name)
+    
+    if object is None:
+        send_message(player, "No object with that name found.\n")
+        return
+    
+    if check_flag(object.wear_flags, ObjLocationType.WIELD) == False:
+        send_message(player, "You can't wield that.\n")
+        return
+    
+    player.wield(object)
+    
 
 def player_movement(player, direction):
     current_position = player.character.get_position()
@@ -577,6 +621,7 @@ commands = {
     'look': [look_command],
     'motd': [lambda player, argument: send_message(player, read_motd() + "\n")],
     'north': [north_command],
+    'put': [put_command],
     'quit': [quit_command],
     'recall': [recall_command],
     'rest': [rest_command],
@@ -594,6 +639,7 @@ commands = {
     'up': [up_command],
     'wake': [stand_command],
     'west': [west_command],
+    'wield': [wield_command],
     'who': [who_command],
     # Add more commands here...
 }
@@ -677,3 +723,43 @@ def move_player(player, old_room_vnum, new_room_vnum, msg_to_room=None, msg_to_p
                 kill_mob(mob, player)
     
     mprog_room_check(player)
+    
+def process_items(player, target, item_name, action, search_item_set):
+    """
+    Processes items in the player's inventory based on the provided action.
+
+    This function handles the logic for processing items in the player's inventory
+    for commands like 'give' and 'get'. It supports processing all items, all items
+    with a specific name, or a single item with a specific name.
+
+    Parameters:
+    player (Player): The player performing the action.
+    target (Player or Mob): The target of the action. This can be another player, a mob, or None.
+    item_name (str): The name of the item(s) to process. This can be 'all', 'all.item_name', or a specific item name.
+    action (function): The action to perform. This should be a function that takes a player, an item, and a target as parameters.
+
+    Returns:
+    None
+    """
+    if item_name == 'all':
+        if len(search_item_set) == 0:
+            send_message(player, "You are not carrying anything.\n")
+            return
+        for object in list(search_item_set):
+            action(player, object, target)
+    elif item_name.startswith('all.'):
+        if len(item_name) == 4:
+            send_message(player, "Give what to whom?\n")
+            return
+        object_list = [item for item in search_item_set if any(kw.startswith(item_name[4:]) for kw in item.get_keywords())]
+        if not object_list:
+            send_message(player, "You are not carrying anything with that name.\n")
+            return
+        for object in object_list:
+            action(player, object, target)
+    else:
+        object = search_items(search_item_set, item_name)
+        if object is None:
+            send_message(player, "No item with that name found.\n")
+            return
+        action(player, object, target)

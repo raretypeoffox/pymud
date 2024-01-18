@@ -107,6 +107,16 @@ and it has keen ears that twitch at the slightest sound.
 
 #OBJECTS
 
+#3000
+weather treasure chest~
+a weather-beaten treasure chest half-buried in the sand~
+A weather-beaten treasure chest lies half-buried in the sand, its wooden frame swollen and cracked from the salty sea air. Rust has consumed the iron bands that once held the chest firmly shut, and the lid now hangs ajar, inviting the curious to peer inside. Its contents, though dampened by the sea, still gleam with the promise of adventure. It seems like the sea has relinquished a secret treasure from its depths. You can 'look in chest' to inspect its contents and 'get <item> chest' to take something from the chest.~
+~
+15 0 0
+0 0 0 0
+1000 0 0
+
+
 #3001
 scroll mysterious glowing magic missile~
 a mysterious glowing scroll~
@@ -114,9 +124,37 @@ A mysterious scroll, its edges glowing with a faint, pulsating light.
 
 Perhaps you should "study scroll"...~
 ~
-2 0 0
+2 0 1
 0 0 0 0
 1 10 10
+
+#3002
+iron sword~
+a simple iron sword~
+A simple iron sword lies, its blade slightly tarnished from the salty sea air. The sword is unadorned, with a plain crossguard and a worn leather grip, suggesting it was made for function over form. Despite its humble appearance, the blade is well-balanced and sharp, promising reliability in the hands of a skilled wielder. It may not be the sword of legends, but for a new adventurer, it's a trustworthy companion for the trials ahead.~
+~
+5 0 1|8192
+0 0 0 0
+10 10 10
+
+#3003
+simple bronze dagger~
+a simple bronze dagger~
+A simple bronze dagger catches your eye. Its blade shows signs of wear and the bronze is not as lustrous as it once might have been, but the edge is still sharp. The handle, wrapped in worn leather, suggests it has been a reliable tool for someone in the past. This dagger, while modest, would serve a new adventurer well.~
+~
+5 0 1|8192
+0 0 0 0
+10 10 10
+
+#3004
+oak wand~
+a slender oak wand~
+The wood is smooth and polished, with runes faintly etched along its length, pulsating softly with a magical glow. Ideal for channeling arcane energies, this wand is a potent tool for those who seek to harness the elements and bend them to their will.~
+~
+5 0 1|8192
+0 0 0 0
+10 10 10
+
 
 #0
 
@@ -137,7 +175,9 @@ Crashing waves shoreline~
   The rhythmic sound of waves crashing against the shore fills the air. The 
 cool sea water gently laps at your feet, retreating back to reveal a sandy 
 beach strewn with shells and seaweed. In the distance, seagulls caw as they 
-circle above the water's surface.
+circle above the water's surface.\n\n
+
+The rhythmic sound of waves crashing against the shore fills the air. The cool sea water gently laps at your feet, retreating back to reveal a sandy beach strewn with shells, seaweed, and an intriguing sight-a weather-beaten treasure chest half-buried in the sand. In the distance, seagulls caw as they circle above the water's surface. You might want to 'LOOK CHEST' to discover what secrets it holds.
 ~
 3000 0 8
 D0
@@ -325,6 +365,12 @@ M 0 3003 2 3006           (turtle)
 M 0 3005 2 3007           (spider)
 M 0 3005 2 3008           (spider)
 M 0 3006 1 3008           (bat)
+
+O 0 3000 1 3001           (chest)
+P 0 3002 1 3000           (simple sword)
+P 0 3003 1 3000           (bronze dagger)
+P 0 3004 1 3000           (oak wand)
+
 
 O 0 3001 1 3008           (scroll of magic missile)
 S

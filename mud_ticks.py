@@ -7,8 +7,7 @@ from mud_comms import send_room_message
 from mud_objects import player_manager, mob_instance_manager, room_manager, object_instance_manager, reset_manager
 from mud_shared import colourize, first_to_upper, log_error, log_info
 from mud_handler import player_movement
-import mud_consts
-from mud_consts import ObjState
+from mud_consts import ObjState, ObjLocationType
 
 class TimeManager:
     def __init__(self):
@@ -92,15 +91,15 @@ def do_imp():
     if len(imp_manager.imp_list) > 0:
         for obj in imp_manager.imp_list:
             if obj is not None and obj.state == ObjState.DROPPED and obj.insured == None:
-                if obj.location_type == 'room' and obj.location_instance is None:
+                if obj.location_type == ObjLocationType.ROOM and obj.location_instance is None:
                     if obj.location_instance is None:
                         log_error(f"Object {obj.name} has no location room instance but is ready to be imped (looking for room vnum {obj.location})")
                         continue
                     send_room_message(obj.location_instance, f"{first_to_upper(obj.name)} disappears in a puff of smoke!\n")
-                if obj.location_type == 'player':
+                if obj.location_type == ObjLocationType.PLAYER:
                     log_error(f"Object {obj.name} is attempting to be imp'd but is still on a player")
                     continue
-                if obj.location_type == 'mob':
+                if obj.location_type == ObjLocationType.MOB:
                     log_info(f"Object {obj.name} is on a mob and being imped")
                 obj.imp()
                 del obj

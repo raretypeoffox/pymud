@@ -4,6 +4,7 @@ from enum import Enum
 
 SERVER_LOG = "server_log.txt"
 MOTD_FILE = "config/motd.txt"
+BANLIST = "config/banlist.txt"
 
 Greeting = """
                         /\\
@@ -141,21 +142,41 @@ ORIGINS = [
   "Wandering Bard"
 ]
 
-#define ITEM_TAKE		      1
-#define ITEM_WEAR_FINGER	      2
-#define ITEM_WEAR_NECK		      4
-#define ITEM_WEAR_BODY		      8
-#define ITEM_WEAR_HEAD		     16
-#define ITEM_WEAR_LEGS		     32
-#define ITEM_WEAR_FEET		     64
-#define ITEM_WEAR_HANDS		    128 
-#define ITEM_WEAR_ARMS		    256
-#define ITEM_WEAR_SHIELD	    512
-#define ITEM_WEAR_ABOUT		   1024 
-#define ITEM_WEAR_WAIST		   2048
-#define ITEM_WEAR_WRIST		   4096
-#define ITEM_WIELD		   8192
-#define ITEM_HOLD		  16384
+# obj extra flags
+#define ITEM_GLOW		      1
+#define ITEM_HUM		      2
+#define ITEM_DARK		      4
+#define ITEM_LOCK		      8
+#define ITEM_EVIL		     16
+#define ITEM_INVIS		     32
+#define ITEM_MAGIC		     64
+#define ITEM_NODROP		    128
+#define ITEM_BLESS		    256
+#define ITEM_ANTI_GOOD		    512
+#define ITEM_ANTI_EVIL		   1024
+#define ITEM_ANTI_NEUTRAL	   2048
+#define ITEM_NOREMOVE		   4096
+#define ITEM_INVENTORY		   8192
+
+
+
+
+class EquipSlots(Enum):
+    INVENTORY = 1
+    FINGER = 2
+    NECK = 4
+    BODY = 8
+    HEAD = 16
+    LEGS = 32
+    FEET = 64
+    HANDS = 128
+    ARMS = 256
+    OFFHAND = 512
+    ABOUT = 1024
+    WAIST = 2048
+    WRIST = 4096
+    WIELD = 8192
+    HELD = 16384
 
 EQ_SLOTS = {
   1: "<held in inventory>",
@@ -206,11 +227,46 @@ EQ_SLOTS = {
 
 class BaseEnum(Enum):
     @classmethod
-    def get_name_by_value(cls, value):
+    def get_name_by_value(cls, value: int):
+        """
+        Returns the name of the Enum member with the given value.
+
+        This method iterates over the Enum members and returns the name of the member with the value `value`. 
+        The name is converted to lowercase before it's returned. If no member with the value `value` is found, 
+        the method returns `None`.
+
+        Args:
+            value (int): The value of the Enum member.
+
+        Returns:
+            str: The name of the Enum member with the value `value`, or `None` if no such member is found.
+        """
         for member in cls:
             if member.value == value:
                 return member.name.lower()
         return None
+      
+    @classmethod
+    def get_member_by_value(cls, value: int):
+        """
+        Returns the Enum member with the given value.
+
+        This method uses the `_value2member_map_` attribute of the Enum class to get the Enum member with the value `value`. 
+        If no member with the value `value` is found, the method raises a `ValueError`.
+
+        Args:
+            value (int): The value of the Enum member.
+
+        Returns:
+            Enum: The Enum member with the value `value`.
+
+        Raises:
+            ValueError: If no Enum member with the value `value` is found.
+        """
+        member = cls._value2member_map_.get(value)
+        if member is None:
+            raise ValueError(f"{value} is not a valid value for {cls.__name__}")
+        return member
       
 class Exits(BaseEnum):
     NORTH = 0
@@ -220,15 +276,68 @@ class Exits(BaseEnum):
     UP = 4
     DOWN = 5
 
+ 
+class ObjType(BaseEnum):
+  LIGHT = 1
+  SCROLL = 2
+  WAND = 3
+  STAFF = 4
+  WEAPON = 5
+  TREASURE = 8
+  ARMOR = 9
+  POTION = 10
+  FURNITURE = 12
+  TRASH = 13
+  CONTAINER = 15
+  DRINK_CON = 17
+  KEY = 18
+  FOOD = 19
+  MONEY = 20
+  BOAT = 22
+  CORPSE_NPC = 23
+  CORPSE_PC = 24
+  FOUNTAIN = 25
+  PILL = 26
+  
+  
+class ObjWearFlags(BaseEnum):
+  TAKE = 1
+  WEAR_FINGER = 2
+  WEAR_NECK = 4
+  WEAR_BODY = 8
+  WEAR_HEAD = 16
+  WEAR_LEGS = 32
+  WEAR_FEET = 64
+  WEAR_HANDS = 128
+  WEAR_ARMS = 256
+  WEAR_SHIELD = 512
+  WEAR_ABOUT = 1024
+  WEAR_WAIST = 2048
+  WEAR_WRIST = 4096
+  WIELD = 8192
+  HOLD = 16384
+  
+  
+  
+
 class ObjState(BaseEnum):
-  NORMAL = 0  # For standard reset items, won't save
+  NORMAL = 0  # For standard reset items and objects, won't save
   DROPPED = 1 # For items dropped on the ground, save but will imp after time
   INVENTORY = 2  # For items in inventory, will save
   LOCKER = 3  # For items in lockers, will save
   EQUIPPED = 4  # For items equipped, will save
   SPECIAL = 5  # For items that are special, will save (even if on ground) and not imp
   QUEST = 6  # For items that are quest items, will save (even if on ground) and not imp
-  MAX = 7 # For checking if valid state, not a state itself (add new states above and increment max)  
+  PC_CONTAINER = 7 # For items placed in containers within the players inventory, will save and not imp
+  OTHER_CONTAINER = 8 # For items placed in containers, won't save but won't imp (unless container imps)
+  
+class ObjLocationType(BaseEnum):
+  PLAYER = 0
+  ROOM = 1
+  MOB = 2
+  PC_CONTAINER = 3
+  OTHER_CONTAINER = 4
+  
 
 class MobActFlags(BaseEnum):
     SENTINEL = 2

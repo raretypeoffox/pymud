@@ -16,6 +16,7 @@ from mud_ticks import timed_events
 from mud_gmcp import handle_gmcp_negotiation, handle_gmcp_message, send_gmcp_messages
 from mud_gmcp import TELNET_WILL_SUPPORT, TELNET_WONT_SUPPORT, TELNET_GMCP_ASK_SUPPORTED, TELNET_GMCP_MSG_START
 from mud_objects import player_manager
+from mud_consts import BANLIST
 
 from mud_shared import log_msg
 def log_client_input(player, msg):
@@ -24,7 +25,26 @@ def log_client_input(player, msg):
     if player.name:
         log_msg(f"[PLAYER]: {player.name}): {msg.rstrip()}")
     else:
-        log_msg(f"[PLAYER]: {player.fd}): {msg.rstrip()}")             
+        log_msg(f"[PLAYER]: {player.fd}): {msg.rstrip()}")   
+        
+import ipaddress
+
+def load_ban_list():
+    ban_list = []
+    try:
+        with open(BANLIST, 'r') as file:
+            for line in file:
+                ip = line.strip()  # Remove any leading/trailing whitespace
+                try:
+                    ipaddress.ip_address(ip)  # Check if it's a valid IP
+                    ban_list.append(ip)
+                except ValueError:
+                    print(f"Ignoring invalid IP: {ip}")
+    except FileNotFoundError:
+        print("banlist.txt not found.")
+    except Exception as e:
+        print(f"Unexpected error while reading banlist.txt: {e}")
+    return ban_list          
 
 def start_server(port=4000):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -39,6 +59,8 @@ def start_server(port=4000):
     game_loop(server_socket)
     
 def game_loop(server_socket):
+    ban_list = load_ban_list()
+    
     while True:
         # Rebuild the list of sockets to monitor at the start of each loop iteration
         sockets = [server_socket] + [player.socket for player in player_manager.get_players()]
@@ -53,6 +75,10 @@ def game_loop(server_socket):
                 # If the server socket is ready to read, a new connection is available
                 try:
                     client_sock, addr = server_socket.accept()
+                    if addr[0] in ban_list:
+                        log_info(f"Rejected connection from banned IP {addr}")
+                        client_sock.close()
+                        continue
                     client_sock.setblocking(False)  # Set to non-blocking mode
                     log_info(f"Accepted connection from {addr}")
                     handle_new_client(client_sock)

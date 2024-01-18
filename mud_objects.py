@@ -12,7 +12,7 @@ from enum import Enum
 
 from mud_shared import dice_roll, colourize, log_info, log_error, check_flag, first_to_upper, process_keyword, process_search_output
 import mud_consts
-from mud_consts import Exits, ObjState, MobActFlags, RoomFlags, RoomSectorType
+from mud_consts import Exits, ObjType, ObjWearFlags, ObjState, ObjLocationType, MobActFlags, RoomFlags, RoomSectorType
 from mud_abilities import Abilities
 
 class PlayerDatabase:
@@ -160,7 +160,7 @@ class ObjectDatabase:
             obj.state.value,
             obj.insured,
             obj.location,
-            obj.location_type,
+            obj.location_type.value,
             obj.max_hitpoints,
             obj.current_hitpoints,
             json.dumps(obj.enchantments)
@@ -173,7 +173,7 @@ class ObjectDatabase:
             log_error("Object DB Error: Database connection is not open")
             return
 
-        data = [(str(obj.uuid), obj.vnum, obj.name, obj.description, obj.action_desc, obj.state.value, obj.insured, obj.location, obj.location_type, obj.max_hitpoints, obj.current_hitpoints, json.dumps(obj.enchantments)) for obj in objects]
+        data = [(str(obj.uuid), obj.vnum, obj.name, obj.desc, obj.action_desc, obj.state.value, obj.insured, obj.location, obj.location_type.name, obj.max_hitpoints, obj.current_hitpoints, json.dumps(obj.enchantments)) for obj in objects]
 
         self.cursor.executemany("""
             INSERT OR REPLACE INTO objects VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -209,7 +209,11 @@ class ObjectDatabase:
             obj.state = ObjState(row[5])
             obj.insured = row[6]
             obj.location = row[7]
-            obj.location_type = row[8]
+            # remove after testing
+            try:
+                obj.location_type = ObjLocationType(row[8])
+            except:
+                obj.location_type = ObjLocationType.PLAYER
             obj.max_hitpoints = row[9]
             obj.current_hitpoints = row[10]
             try:
@@ -267,7 +271,7 @@ class InstanceManager:
     def get_all_by_vnum(self, vnum):
         return self.instances.get(vnum, [])
 
-    def get(self, vnum, index):
+    def get(self, vnum, index=0):
         return self.instances.get(vnum, [None])[index]
 
     def get_all(self):
@@ -385,9 +389,6 @@ class Player:
         self.created = datetime.now()
         self.lastlogin = datetime.now()
         self.title = ""
-        
-        # local reference to the object instance manager
-        self.object_instance_manager = object_instance_manager
 
     def save(self):
         player_db.save_player(self)
@@ -457,7 +458,10 @@ class Player:
         return msg
     
     def get_objects(self):
-        return {self.object_instance_manager.get_object_by_uuid(uuid) for uuid in self.inventory.get_all()}
+        return {object_instance_manager.get_object_by_uuid(uuid) for uuid in self.inventory.get_all()}
+    
+    def get_containers(self):
+        return {obj for obj in self.get_objects() if obj.is_container()}
     
     def get_title(self):
         if self.title == "":
@@ -883,7 +887,7 @@ class Room:
                     msg += colourize(f"    {player.name} {player.get_title()}{position_str}\n", "cyan")
                     count_per_exit[exit] += 1
                 for mob in room_manager.get(self.doors[exit]["to_room"]).mob_list:
-                    msg += colourize(f"    {first_to_upper(mob.template.long_desc)}", "cyan")
+                    msg += colourize(f"    {first_to_upper(mob.template.long_desc)}\n", "cyan")
                     count_per_exit[exit] += 1
                 if count_per_exit[exit] == 0:
                     msg += "    You see no one here.\n"
@@ -899,6 +903,9 @@ class Room:
     
     def get_objects(self):
         return self.object_list
+    
+    def get_containers(self):
+        return {obj for obj in self.object_list if obj.is_container()}
     
     def get_doors(self):
         return self.door_list
@@ -927,7 +934,7 @@ class Room:
         if not mob_names:  # Check if the list is empty
             return ""
         else:
-            ret_str = ''.join(name for name in mob_names)
+            ret_str = '\n'.join(name for name in mob_names)
             return colourize(ret_str, "cyan")
         
     def get_object_names(self):
@@ -944,7 +951,6 @@ class Room:
         for name, count in inventory_items.items():
             count_str = f"({count:2})" if count > 1 else "     "
             msg += f"  {count_str} {first_to_upper(name)}\n"
-                
         return msg
 
     def flag(self, flag):
@@ -1006,8 +1012,6 @@ class MobInstance:
         self.set_room(room)
         mob_instance_manager.add(self)
         
-        # todo
-        
         self.group = None
         self.follow = None
         
@@ -1017,7 +1021,10 @@ class MobInstance:
         return self.template.keywords.split()
     
     def get_objects(self):
-        return {self.object_instance_manager.get_object_by_uuid(uuid) for uuid in self.inventory.get_all()}
+        return {object_instance_manager.get_object_by_uuid(uuid) for uuid in self.inventory.get_all()}
+    
+    def get_containers(self):
+        return {obj for obj in self.get_objects() if obj.is_container()}
 
     def set_room(self, room):
         self.current_room = room
@@ -1067,7 +1074,7 @@ class MobInstance:
             self.aggro_list.pop()
 
 class ObjectInstance:
-    def __init__(self, template, obj_reset=None, room=None, instance_uuid=None):
+    def __init__(self, template, obj_reset=None, instance_uuid=None):
         self.template = template
         self.vnum = template.vnum
         self.uuid = instance_uuid if instance_uuid is not None else uuid.uuid1()
@@ -1087,21 +1094,37 @@ class ObjectInstance:
         
         self.enchantments = {}
         
+        # review this in detail
         if obj_reset is not None:
             self.obj_reset = obj_reset
             
-        if room is not None:
-            self.update_location("room", room.vnum, room)
-            room.add_object(self)
+            if obj_reset.location_type == ObjLocationType.ROOM:
+                room = room_manager.get(obj_reset.location_vnum)
+                if room is None:
+                    log_error(f"ObjectInstance: couldn't load room for object {self.vnum} {self.name}")
+                    return
+                self.update_location(ObjLocationType.ROOM, room.vnum, room)
+                room.add_object(self)
+            elif obj_reset.location_type == ObjLocationType.OTHER_CONTAINER:
+                container = object_instance_manager.get(obj_reset.location_vnum)
+                if container is None:
+                    log_error(f"ObjectInstance: couldn't load container for object {self.vnum} {self.name}")
+                    return
+                self.update_location(ObjLocationType.OTHER_CONTAINER, container.vnum, container)
+                container.inventory.add(self)
+                
         
         object_instance_manager.add(self)
+        self.inventory = None
+        if self.is_container():
+            self.inventory = Inventory()
                  
                     
     def save(self):
         object_db.save_object(self)
        
     def load(self):
-        if self.location_type == "room":
+        if self.location_type == ObjLocationType.ROOM:
             self.location = int(self.location)
             room = room_manager.get(self.location)
             if room is not None:
@@ -1122,14 +1145,15 @@ class ObjectInstance:
             log_error(f"Object imp: object {self.vnum} {self.name} is insured")
             return
 
-        if self.location_type == "room":
+        if self.location_type == ObjLocationType.ROOM:
             self.location_instance.remove_object(self)
-        elif self.location_type == "mob":
+        elif self.location_type == ObjLocationType.MOB:
             if self.location_instance is not None:
                 self.location_instance.inventory.remove(self)
-        elif self.location_type == "player":
+        elif self.location_type == ObjLocationType.PLAYER:
             if self.location_instance is not None:
                 self.location_instance.inventory.remove(self)
+        # TODO Add containers
         else:
             log_error(f"Object imp: object {self.vnum} {self.name} is not in a known location: {self.location_type}")
             return
@@ -1138,13 +1162,23 @@ class ObjectInstance:
         object_instance_manager.remove(self)      
         
     
-    def update_location(self, location_type, location, location_instance):
-        self.location = location
+    def update_location(self, location_type, location, location_instance):   
+        """
+        Updates the location details of the object.
+
+        This method updates the type, location, and instance of the object's location.
+
+        Args:
+            location_type (ObjLocationType): The type of the location. This should be an instance of the ObjLocationType Enum.
+            location (str or int): The location of the object. This could be a room ID, player ID, or any other identifier that represents the location.
+            location_instance (Object): The instance of the location. This could be a Room instance, Player instance, or any other object that represents the location.
+        """
         self.location_type = location_type
+        self.location = location
         self.location_instance = location_instance
         
     def update_state(self, state):
-        if isinstance(state, Enum) and 0 <= state.value < ObjState.MAX.value:
+        if isinstance(state, Enum) and 0 <= state.value <= len(ObjState):
             self.state = state
         else:
             log_error(f"Invalid state {state} (object {self.vnum} {self.name})")
@@ -1154,7 +1188,7 @@ class ObjectInstance:
     
     def get_description(self):
         description = []
-        description.append(self.description)
+        description.append(self.desc)
         return "\n".join(description)  
     
     def get_action_desc(self):
@@ -1162,60 +1196,114 @@ class ObjectInstance:
         description.append(self.action_desc)
         return "\n".join(description)
     
-    def pickup(self, player):
-        if self not in player.current_room.object_list:
-            log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is not in room {player.current_room.vnum}")
+    def get_objects(self):
+        if self.inventory is None:
+            return None
+        return {object_instance_manager.get_object_by_uuid(uuid) for uuid in self.inventory.get_all()}
+    
+    def is_container(self):
+        return self.template.item_type in [ObjType.CONTAINER, ObjType.CORPSE_PC, ObjType.CORPSE_NPC]
+    
+    def get_inventory_description(self):        
+        inventory_items = {}
+        msg = ""
+        for uuid in self.inventory.get_all():
+            obj = object_instance_manager.get_object_by_uuid(uuid)
+            if obj.name in inventory_items:
+                inventory_items[obj.name] += 1
+            else:
+                inventory_items[obj.name] = 1
+
+        for name, count in inventory_items.items():
+            count_str = f"({count:2})" if count > 1 else "     "
+            msg += f"  {count_str} {name}\n"
+                
+        return msg
+
+    def is_takeable(self):
+        return check_flag(self.template.wear_flags, ObjWearFlags.TAKE)
+    
+    def _is_in_inventory(self, player):
+        if self.uuid not in player.inventory.uuids:
+            log_error(f"Object operation: object {self.vnum}, {self.name} not in {player.name} inventory")
             return False
-  
-        if self.state == ObjState.INVENTORY or self.state == ObjState.LOCKER or self.state == ObjState.EQUIPPED:
-            log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
+        return True
+    
+    def _is_in_room(self, player, operation):
+        if self not in player.current_room.object_list:
+            log_error(f"Object {operation}: object {self.vnum} {self.name} by {player.name} is not in room {player.current_room.vnum}")
+            return False
+        return True
+
+    def _is_in_valid_state(self, player, operation, invalid_states):
+        if self.state in invalid_states:
+            log_error(f"Object {operation}: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
+            return False
+        return True
+
+    def put(self, player, target):
+        invalid_states = [ObjState.LOCKER, ObjState.EQUIPPED]
+        if not self._is_in_inventory(player) or not self._is_in_valid_state(player, 'put', invalid_states):
+            return False
+
+        if isinstance(target, ObjectInstance) is False:
+            log_error(f"Object put: target {target.vnum}, {target.name} is not an object")()
+            return False
+
+        if target.location_type == ObjLocationType.PLAYER:
+            self.update_state(ObjState.PC_CONTAINER)
+            target_is = ObjLocationType.PC_CONTAINER
+        else:
+            self.update_state(ObjState.OTHER_CONTAINER)
+            target_is = ObjLocationType.OTHER_CONTAINER
+
+        self.update_location(target_is, target.name, target)    
+        player.inventory.remove(self)
+        target.inventory.add(self)
+
+        self.save()
+        return True
+
+    def pickup(self, player):
+        invalid_states = [ObjState.INVENTORY, ObjState.LOCKER, ObjState.EQUIPPED]
+        if not self._is_in_valid_state(player, 'pickup', invalid_states):
             return False
         
         if self.state == ObjState.NORMAL:
-            # normal items need to reset on repop
+            # normal items need to reset on repop - add them to the repop queue
             reset_manager.add_to_obj_repop_queue(self.obj_reset)
         
         player.current_room.remove_object(self)
         player.inventory.add(self)
         self.update_state(ObjState.INVENTORY)
-        self.update_location("player", player.name, player)
+        self.update_location(ObjLocationType.PLAYER, player.name, player)
         self.save()
         return True
     
-    def drop(self, player):
-        # todo code to check for no drop flag
-        
-        if self.uuid not in player.inventory.uuids:
-            log_error(f"Object drop: object {self.vnum}, {self.name} not in {player.name} inventory")
-            return False
-        
-        if self.state == ObjState.LOCKER or self.state == ObjState.EQUIPPED:
-            log_error(f"Object drop: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
+    def drop(self, player):    
+        invalid_states = [ObjState.LOCKER, ObjState.EQUIPPED]
+        if not self._is_in_inventory(player) or not self._is_in_valid_state(player, 'drop', invalid_states):
             return False
 
         self.update_state(ObjState.DROPPED)
         
         player.current_room.add_object(self)
         player.inventory.remove(self)
-        self.update_location("room", player.current_room.vnum, player.current_room)
+        self.update_location(ObjLocationType.ROOM, player.current_room.vnum, player.current_room)
         self.save()
         return True
      
     def give(self, player, target):
-        if self.uuid not in player.inventory.uuids:
-            log_error(f"Object give: object {self.vnum}, {self.name} not in {player.name} inventory")
+        invalid_states = [ObjState.LOCKER, ObjState.EQUIPPED]
+        if not self._is_in_inventory(player) or not self._is_in_valid_state(player, 'give', invalid_states):
             return False
         
-        if self.state == ObjState.LOCKER or self.state == ObjState.EQUIPPED:
-            log_error(f"Object pickup: object {self.vnum} {self.name} by {player.name} is in state {self.state}")   
-            return False
-        
-        target_is = "player"
+        target_is = ObjLocationType.PLAYER
         
         if target.character.NPC:
             if self.state != ObjState.SPECIAL and self.state != ObjState.QUEST:
                 self.update_state(ObjState.DROPPED)
-            target_is = "mob"
+            target_is = ObjLocationType.MOB
 
         self.update_location(target_is, target.name, target)    
         player.inventory.remove(self)
@@ -1223,6 +1311,7 @@ class ObjectInstance:
         
         self.save()
         return True
+    
 
     # for debugging
     def __str__(self):
@@ -1276,9 +1365,8 @@ class Resets:
         if len(self.mob_repop_queue) == 0 and len(self.obj_repop_queue) == 0:
             return False
         while self.obj_repop_queue:
-            obj_reset = self.obj_repop_queue.pop()
-            room = room_manager.get(obj_reset.room_vnum)
-            ObjectInstance(object_manager.get(obj_reset.obj_vnum), obj_reset=obj_reset, room=room)
+            obj_reset = self.obj_repop_queue.pop() 
+            ObjectInstance(object_manager.get(obj_reset.obj_vnum), obj_reset)
             # todo
             # code for objects within containers
         return True
@@ -1301,9 +1389,10 @@ class ResetMob:
         self.inventory.append(item)
         
 class ResetObject:
-    def __init__(self, obj_vnum, room_vnum):
+    def __init__(self, obj_vnum: int, location_vnum: int, location_type: ObjLocationType):
         self.obj_vnum = obj_vnum
-        self.room_vnum = room_vnum
+        self.location_vnum = location_vnum
+        self.location_type = location_type
         
 class CombatManager:
     def __init__(self):

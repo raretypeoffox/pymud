@@ -6,7 +6,7 @@ from enum import Enum
 
 import mud_consts
 from mud_consts import RoomFlags
-from mud_comms import send_message
+from mud_comms import send_message, send_room_message_processing, send_room_message
 from mud_shared import colourize, dice_roll, parse_argument, search_items, is_NPC, is_PC, log_error
 from mud_combat import deal_damage
 from mud_objects import combat_manager
@@ -30,16 +30,19 @@ def spell_burning_hands(caster, target, spell):
     level, sublevel = caster.character.abilities.get_level(spell.spell_name)
     
     num_dice = 2 + (caster.character.int - 10) // 2
-    dam_dice = 2 + sublevel
+    dam_dice = 2 + sublevel + level
     
     damage = dice_roll(num_dice, dam_dice, level**2//2)
+        
+    send_room_message_processing(caster, None, colourize(f"$A utter$s the words 'burning hands'!\n", "yellow"))
     
-    spell_msg = colourize(f"$A utter$s the words 'burning hands'!\n", "yellow")
-    
+    mob_count = 0
     for mob in set(caster.current_room.get_mobs()):
-        spell_msg += colourize(f"$A point$s at $D and a small flame shoots out, dealing {damage} damage!\n", "red")
-        deal_damage(caster, mob, damage, spell_msg)
-        spell_msg = ""
+        mob_count += 1
+        deal_damage(caster, mob, damage, colourize(f"$A point$s at $D and a small flame shoots out, dealing {damage} damage!\n", "red"))
+    
+    if mob_count == 0:
+        send_room_message(caster.current_room, "With no targets to hit, the spell sputters...\n")
         
 def spell_cure(caster, target, spell):
     
@@ -49,11 +52,12 @@ def spell_cure(caster, target, spell):
     heal_dice = 3 + sublevel
     healing_amount = dice_roll(num_dice, heal_dice, level**2)
     
-    spell_msg = colourize(f"$A utter$s the words 'healing light'!\n", "green")
-    spell_msg += colourize(f"A warm, soothing light envelops $D, healing their wounds and restoring {healing_amount} health!\n", "bright_green")
-
+    spell_msg = colourize(f"$A utter$s the words 'cure'!\n", "green")
+    spell_msg += colourize(f"A warm, soothing light envelops {'$A' if target == caster else '$D'}, healing their wounds and restoring {healing_amount} health!\n", "bright_green")
+    
     target.character.regen_hp(healing_amount)
-
+    send_room_message_processing(caster, target, spell_msg)
+    
     
 
 class TargetType(Enum):
@@ -123,8 +127,6 @@ def do_cast(caster, argument):
     
     # first we need to parse argument to get the spell name and target
     spell_name, target_name = parse_argument(argument)
-    if target_name is None:
-        target_name = ""
 
     # if the spell name is None or too short, then the user didn't provide a valid spell name
     if spell_name is None or len(spell_name) < 3:

@@ -3,10 +3,11 @@ import time
 from mud_objects import MobTemplate, Room, ResetMob, ResetObject, ObjectTemplate, MobInstance, ObjectInstance
 from mud_objects import room_manager, mob_manager, object_manager, reset_manager, mob_instance_manager, object_instance_manager
 from mud_shared import log_info, log_error
+from mud_consts import ObjType, ObjLocationType
 
 ### Parsing functions
 
-
+# TODO delete this function
 def equip_number_to_slot(number):
     slot_map = {
         0: "light",
@@ -38,12 +39,12 @@ def parse_multi_line(lines):
     for line in lines:
         offset += 1
         if line.endswith('~'):
-            ret_string += line[:-1]
+            ret_string += line[:-1].replace('\\n', '\n')
             return ret_string, offset
         elif line.startswith('~'):
             return ret_string, offset
         else:
-            ret_string += line + '\n'
+            ret_string += line.replace('\\n', '\n')
             
 def parse_flags(flag_string):
     if '|' in flag_string:
@@ -108,17 +109,9 @@ def parse_object(lines):
     offset += offset_add
     
     current_object.item_type, current_object.extra_flags, current_object.wear_flags = lines[offset].split()
-    current_object.item_type = int(current_object.item_type)
+    current_object.item_type = ObjType.get_member_by_value(int(current_object.item_type))
     current_object.extra_flags = parse_flags(current_object.extra_flags)
-    wear_flags = current_object.wear_flags.split("|")
-    if len(wear_flags) == 1:
-        wear_flags = int(wear_flags[0])
-        if wear_flags % 2 == 1:
-            wear_flags = wear_flags - 1
-        if wear_flags > 0:    
-            current_object.wear_flags = wear_flags
-    else:  
-        current_object.wear_flags = int(wear_flags[1])
+    current_object.wear_flags = parse_flags(current_object.wear_flags)
     offset+=1
     
     current_object.value_0, current_object.value_1, current_object.value_2, current_object.value_3 = lines[offset].split()
@@ -202,16 +195,22 @@ def parse_reset(line):
             
         elif line[line_index].startswith('O'):
             split_line = line[line_index].split()[2:]
-            obj_vnum, _, obj_room_vnum, *_ = split_line
+            obj_vnum, _, target_vnum, *_ = split_line
             obj_vnum = int(obj_vnum)
-            obj_room_vnum = int(obj_room_vnum)
+            target_vnum = int(target_vnum)
             
-            obj_reset = ResetObject(obj_vnum, obj_room_vnum)
+            obj_reset = ResetObject(obj_vnum, target_vnum, ObjLocationType.ROOM)
             reset_manager.add_object_reset(obj_reset)
             
             pass
         elif line[line_index].startswith('P'):
-            # handle 'P' case here
+            split_line = line[line_index].split()[2:]
+            obj_vnum, _, target_vnum, *_ = split_line
+            obj_vnum = int(obj_vnum)
+            target_vnum = int(target_vnum)
+            
+            obj_reset = ResetObject(obj_vnum, target_vnum, ObjLocationType.OTHER_CONTAINER)
+            reset_manager.add_object_reset(obj_reset)
             pass
         elif line[line_index].startswith('G'):
             # Case G: give object to mob, format: G 1 5020 5                 (platinum wand)
@@ -244,7 +243,7 @@ def parse_reset(line):
             # comment line, just pass
             pass
         else:
-            print("Unknown reset: ", line[line_index])
+            log_error("parse_reset: unknown starting letter in reset line", line[line_index])
         line_index += 1
  
     
@@ -367,23 +366,33 @@ def reset_world():
                 print(f"Room {mob_reset.room_vnum} not found")
         else:
             print(f"Mob {mob_reset.mob_vnum} not found")
-
+            
     for obj_reset in reset_manager.object_resets:
-        obj_template = object_manager.get(obj_reset.obj_vnum)
-        if obj_template is not None:
-            room = room_manager.get(obj_reset.room_vnum)
-            if room is not None:
-                # check if obj is already in room
-                add_obj = True
-                for obj in room.object_list:
-                    if obj.vnum == obj_reset.obj_vnum:
-                        add_obj = False
-                if add_obj:
-                    obj = ObjectInstance(obj_template, obj_reset, room)
-            else:
-                print(f"Room {obj_reset.room_vnum} not found")
-        else:
-            print(f"Object {obj_reset.obj_vnum} not found")
+        ObjectInstance(object_manager.get(obj_reset.obj_vnum), obj_reset)
+
+    # for obj_reset in reset_manager.object_resets:
+    #     obj_template = object_manager.get(obj_reset.obj_vnum)
+    #     if obj_template is not None:
+    #         if obj_reset.location_type == ObjLocationType.ROOM:
+    #             room = room_manager.get(obj_reset.location_vnum)
+    #             if room is not None:
+    #                 # check if obj is already in room
+    #                 add_obj = True
+    #                 for obj in room.object_list:
+    #                     if obj.vnum == obj_reset.obj_vnum:
+    #                         add_obj = False
+    #                 if add_obj:
+    #                     obj = ObjectInstance(obj_template, obj_reset)
+    #             else:
+    #                 print(f"Room {obj_reset.room_vnum} not found")
+    #         elif obj_reset.location_type == ObjLocationType.OTHER_CONTAINER:
+    #             obj_container = object_instance_manager.get(obj_reset.location_vnum)
+    #             if obj_container is not None:
+    #                 obj = ObjectInstance(obj_template, obj_reset)
+    #             else:
+    #                 print(f"Object {obj_reset.location_vnum} not found")
+    #     else:
+    #         print(f"Object {obj_reset.obj_vnum} not found")
 
 def build_objects():
     start_time = time.time()

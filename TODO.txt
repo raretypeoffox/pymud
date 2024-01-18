@@ -1,15 +1,11 @@
 Fix how Equipment slots work
 Should we build server side handling of wrap lines (eg room descriptions)
 Config for player settings (prompt, info etc)
+Clean up Exits / Extended descriptions in Room class
+Move all DB code to mud_db.py
+We need a way to save containers
+Implement get all. / drop all. / put all. etc
 
 
-Mandel list:
-+ can't cast to open combat
-+ names not auto capitalized
-+ scan is ugly
 
-Things to think about:
-- should I use dataclasses?
-- should I change when password is saved in password db (ie only after character is created)
-- change login routine?
 

@@ -127,24 +127,43 @@ def handle_gmcp_message(data, player):
 
     # Split the GMCP message into parts
     parts = gmcp_msg_str.split(' ', 2)
+    
+    try:
+        # Check if the first part contains a '.'
+        if '.' in parts[0]:
+            # Split the first part into package and message parts
+            package, message = parts[0].split('.', 1)
+    except ValueError:
+        package = None
+        message = None
+        return
 
     # If the message contains data, parse it
-    if len(parts) == 3:
-        package, message, data_str = parts
-        data = json.loads(data_str)
-    elif len(parts) == 2:
-        package, message = parts
-        data = None
-    else:
-        package = parts[0]
-        message = None
-        data = None
+    if len(parts) == 2:
+        data = json.loads(parts[1])
 
-    # Perform the appropriate action based on the package and message
-    # ... not yet implemented ... TODO
+
+    process_gmcp_message(player, package, message, data)
     
     log_info(f"Received GMCP message from player {player.fd}: {package} {message} {data}")
-    
+
+def process_gmcp_message(player, package, message, data):
+    if package == "Core":
+        if message == "Ping":
+            player.gmcp.queue_message("Core", "Ping", {})
+        elif message == "Hello":
+            if data is not None:
+                if "client" in data:
+                    client = data["client"]
+                if "version" in data:
+                    version = data["version"]
+                log_info(f"Player {player.fd} is using {client} version {version}")
+    elif package == "Char":
+        if message == "Status" or message == "Vitals":
+            player.gmcp.update_status()
+        elif package == "Room":
+            player.gmcp.update_room()
+            
 def send_gmcp_messages(players):
     for player in players:
         if player.gmcp:
@@ -159,3 +178,5 @@ def send_gmcp_messages(players):
                     handle_disconnection(player)
                 except Exception as e:  # This will catch any other types of exceptions
                     log_error(f"Unexpected error while sending GMCP message: {e}")
+                    
+

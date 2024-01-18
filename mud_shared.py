@@ -123,30 +123,37 @@ def first_to_upper(s : str) -> str:
 
 def check_flag(flags, flag):
     '''
-    Checks if a specific flag is set in a bitfield.
+    Checks if any specific flag in a list is set in a bitfield.
 
-    This function performs a bitwise AND operation between the flags and the flag to check.
-    It raises a ValueError if either flags or flag is not an integer, or if flag is not a power of 2.
+    This function performs a bitwise AND operation between the flags and each flag to check.
+    It raises a ValueError if either flags or flag is not an integer, or if any flag is not a power of 2.
 
     Parameters:
     flags (int): The bitfield of flags.
-    flag (int or Enum): The specific flag to check. Must be a power of 2.
+    flag (int or Enum or list of int or Enum): The specific flag(s) to check. Each must be a power of 2.
 
     Returns:
-    bool: True if the flag is set in the bitfield, False otherwise.
+    bool: True if any flag is set in the bitfield, False otherwise.
     '''
     if not isinstance(flags, int):
         raise ValueError("Flags must be an integer.")
     
-    if isinstance(flag, Enum):
-        flag = flag.value
-    elif not isinstance(flag, int):
-        raise ValueError("Flag must be an integer or an Enum member.")
+    if not isinstance(flag, list):
+        flag = [flag]
     
-    if flag != 0 and ((flag & (flag - 1)) != 0):
-        raise ValueError("Flag value must be a power of 2.")
+    for f in flag:
+        if isinstance(f, Enum):
+            f = f.value
+        elif not isinstance(f, int):
+            raise ValueError("Each flag must be an integer or an Enum member.")
+        
+        if f != 0 and ((f & (f - 1)) != 0):
+            raise ValueError("Each flag value must be a power of 2.")
+        
+        if bool(flags & f):
+            return True
     
-    return bool(flags & flag)
+    return False
 
 def is_NPC(player):
     if player.character is None:
@@ -220,7 +227,7 @@ def search_items(items: set, keyword: str) -> object:
         all_items = (room.get_players() | player.get_objects() | room.get_mobs() | room.get_objects() | room.get_doors() | room.get_extended_descriptions())
         item = search_items(all_items, argument)
     '''
-    if keyword == "":
+    if keyword == "" or keyword == None:
         return None
     
     # Process the keyword
@@ -265,3 +272,4 @@ def parse_argument(argument):
     remainder = remainder.lower() if remainder is not None else None
 
     return first, remainder
+
