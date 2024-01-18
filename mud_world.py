@@ -346,14 +346,14 @@ def reset_world():
                 # for i in range(mob_reset.max_count):
                 mob = MobInstance(mob_template, mob_reset, room)
                 
-                if mob_reset.equipment:
-                    for slot, obj_vnum in mob_reset.equipment.slots.items():
-                        if obj_vnum != 0:
-                            obj_template = object_manager.get(obj_vnum)
-                            if obj_template is not None:
-                                obj = ObjectInstance(obj_template)
-                                object_instance_manager.add(obj)
-                                mob.equipment.equip(slot, obj)
+                # if mob_reset.equipment:
+                #     for slot, obj_vnum in mob_reset.equipment.slots.items():
+                #         if obj_vnum != 0:
+                #             obj_template = object_manager.get(obj_vnum)
+                #             if obj_template is not None:
+                #                 obj = ObjectInstance(obj_template)
+                #                 object_instance_manager.add(obj)
+                #                 mob.equipment.equip(slot, obj)
                 if mob_reset.inventory:
                     for obj_vnum in mob_reset.inventory:
                         obj_template = object_manager.get(obj_vnum)

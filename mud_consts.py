@@ -161,40 +161,9 @@ ORIGINS = [
 
 
 
-class EquipSlots(Enum):
-    INVENTORY = 1
-    FINGER = 2
-    NECK = 4
-    BODY = 8
-    HEAD = 16
-    LEGS = 32
-    FEET = 64
-    HANDS = 128
-    ARMS = 256
-    OFFHAND = 512
-    ABOUT = 1024
-    WAIST = 2048
-    WRIST = 4096
-    WIELD = 8192
-    HELD = 16384
 
-EQ_SLOTS = {
-  1: "<held in inventory>",
-  2: "<worn on finger>",
-  4: "<worn on neck>",
-  8: "<worn on body>",
-  16: "<worn on head>",
-  32: "<worn on legs>",
-  64: "<worn on feet>",
-  128: "<worn on hands>",
-  256: "<worn on arms>",
-  512: "<held in offhand>",
-  1024: "<worn about body>",
-  2048: "<worn about waist>",
-  4096: "<worn on wrist>",
-  8192: "<wielded>",
-  16384: "<held>"
-}
+
+
 
 
 
@@ -317,7 +286,48 @@ class ObjWearFlags(BaseEnum):
   WIELD = 8192
   HOLD = 16384
   
+class EquipSlots(Enum):
+    LIGHT = 1
+    FINGER = 2
+    NECK = 4
+    BODY = 8
+    HEAD = 16
+    LEGS = 32
+    FEET = 64
+    HANDS = 128
+    ARMS = 256
+    OFFHAND = 512
+    ABOUT = 1024
+    WAIST = 2048
+    WRIST = 4096
+    WIELD = 8192
+    HELD = 16384
+
+EQ_SLOTS = {
+  1: "<held in inventory>",
+  2: "<worn on finger>",
+  4: "<worn on neck>",
+  8: "<worn on body>",
+  16: "<worn on head>",
+  32: "<worn on legs>",
+  64: "<worn on feet>",
+  128: "<worn on hands>",
+  256: "<worn on arms>",
+  512: "<held in offhand>",
+  1024: "<worn about body>",
+  2048: "<worn about waist>",
+  4096: "<worn on wrist>",
+  8192: "<wielded>",
+  16384: "<held>"
+}
   
+def get_equip_slot(wear_flag: int):
+  if wear_flag % 2 == 1:
+    wear_flag -= 1
+  for equip_slot in EquipSlots:
+      if equip_slot.value == wear_flag:
+          return equip_slot
+  return None
   
 
 class ObjState(BaseEnum):

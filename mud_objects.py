@@ -12,7 +12,7 @@ from enum import Enum
 
 from mud_shared import dice_roll, colourize, log_info, log_error, check_flag, first_to_upper, process_keyword, process_search_output
 import mud_consts
-from mud_consts import Exits, ObjType, ObjWearFlags, ObjState, ObjLocationType, MobActFlags, RoomFlags, RoomSectorType
+from mud_consts import Exits, ObjType, ObjWearFlags, ObjState, ObjLocationType, MobActFlags, RoomFlags, RoomSectorType, EquipSlots, get_equip_slot
 from mud_abilities import Abilities
 
 class PlayerDatabase:
@@ -431,7 +431,7 @@ class Player:
     def get_description(self):        
         description = []
         description.append(self.name + " " + self.get_title() + "\n")
-        #equipped = self.equipment.get_string_equipped_items()
+        equipped = self.equipment.get_string_equipped_items()
         equipped = None
         if equipped:
             description.append("They are wearing:")
@@ -484,6 +484,24 @@ class Player:
         self.character.tick(self.current_room)
         if self.gmcp is not None:
             self.gmcp.update_status()
+    
+    def wield(self, object):
+        unequip_uuid = self.equipment.get_slot(get_equip_slot(object.template.wear_flags))
+        msg = ""
+        if unequip_uuid is not None:
+            unequip_item = object_instance_manager.get_object_by_uuid(unequip_uuid)
+            unequip_item.unequip(self)
+            msg += f"You stop wielding {unequip_item.name}.\n"
+        object.equip(self)
+        msg += f"You wield {object.name}.\n"
+        if object.action_desc is not None:
+            msg += object.action_desc + "\n"
+        return msg
+        
+        
+
+
+            
 
 class Character:
     def __init__(self, NPC=False):
@@ -668,50 +686,63 @@ class Inventory:
    
 class Equipment:
     def __init__(self):
+        # Key: EquipSlots enum, Value: object UUID
         self.slots = {
-            "light": None,
-            "ring_left": None,
-            "ring_right": None,
-            "neck_one": None,
-            "neck_two": None,
-            "body": None,
-            "head": None,
-            "legs": None,
-            "feet": None,
-            "hands": None,
-            "arms": None,
-            "off_hand": None,
-            "about_body": None,
-            "waist": None,
-            "wrist_left": None,
-            "wrist_right": None,
-            "main_hand": None,
-            "held": None,            
+            EquipSlots.LIGHT : None,
+            EquipSlots.FINGER: [None, None],
+            EquipSlots.NECK: [None, None],
+            EquipSlots.BODY: None,
+            EquipSlots.HEAD: None,
+            EquipSlots.LEGS: None,
+            EquipSlots.FEET: None,
+            EquipSlots.HANDS: None,
+            EquipSlots.ARMS: None,
+            EquipSlots.OFFHAND: None,
+            EquipSlots.ABOUT: None,
+            EquipSlots.WAIST: None,
+            EquipSlots.WRIST: [None, None],
+            EquipSlots.WIELD: None,
+            EquipSlots.HELD: None                 
         }
 
-    # placeholder methods for now
     def equip(self, slot, item):
         if slot in self.slots and self.slots[slot] is None:
-            self.slots[slot] = item
+            self.slots[slot] = item.uuid
         else:
             raise ValueError(f"Cannot equip {item} to {slot}")
 
     def unequip(self, slot):
         if slot in self.slots and self.slots[slot] is not None:
-            item = self.slots[slot]
+            item_uuid = self.slots[slot]
             self.slots[slot] = None
-            return item
+            return item_uuid
         else:
             raise ValueError(f"Cannot unequip from {slot}")
         
+    def get_slot(self, slot):
+        if slot in self.slots:
+            return self.slots[slot]
+        else:
+            raise ValueError(f"Invalid slot {slot}")
+        
     def get_equipped_items(self):
-        return [item for item in self.slots.values() if item is not None]
-    
+        ''' returns objects '''
+        items = []
+        for slot_value in self.slots.values():
+            if isinstance(slot_value, list):
+                items.extend(object_instance_manager.get_object_by_uuid(uuid) for uuid in slot_value if uuid is not None)
+            elif slot_value is not None:
+                items.append(object_instance_manager.get_object_by_uuid(slot_value))
+        return items
+        
     def get_string_equipped_items(self):
         if self.get_equipped_items():
             msg = ""
             for item in self.get_equipped_items():
-                msg += colourize(f"{mud_consts.EQ_SLOTS[int(item.template.wear_flags)]: <20}{item.template.short_desc}\n", "yellow")
+                slot = item.template.wear_flags
+                if slot % 2 == 1:
+                    slot -= 1
+                msg += colourize(f"{mud_consts.EQ_SLOTS[slot]: <20}{item.short_name}\n", "yellow")
             return msg
         else:
             return None
@@ -1312,6 +1343,28 @@ class ObjectInstance:
         self.save()
         return True
     
+    def equip(self, player):
+        invalid_states = [ObjState.LOCKER, ObjState.EQUIPPED]
+        if not self._is_in_inventory(player) or not self._is_in_valid_state(player, 'equip', invalid_states):
+            return False
+
+        self.update_state(ObjState.EQUIPPED)
+        player.inventory.remove(self)
+        player.equipment.equip(get_equip_slot(self.template.wear_flags), self)
+        
+        self.save()
+        
+    def unequip(self, player):
+        invalid_states = [ObjState.LOCKER, ObjState.INVENTORY]
+        if not self._is_in_valid_state(player, 'unequip', invalid_states):
+            return False
+        
+        self.update_state(ObjState.INVENTORY)
+        player.equipment.unequip(get_equip_slot(self.template.wear_flags))
+        player.inventory.add(self)
+        
+        self.save()
+        
 
     # for debugging
     def __str__(self):

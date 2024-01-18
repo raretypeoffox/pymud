@@ -4,7 +4,7 @@ import pickle
 import random
 
 import mud_consts
-from mud_consts import RoomFlags, ObjLocationType
+from mud_consts import RoomFlags, ObjLocationType, ObjWearFlags
 from mud_comms import send_message, send_room_message, handle_disconnection
 from mud_shared import colourize, is_NPC, read_motd, first_to_upper, log_error, search_items, check_flag, parse_argument
 
@@ -544,11 +544,12 @@ def wield_command(player, argument):
         send_message(player, "No object with that name found.\n")
         return
     
-    if check_flag(object.wear_flags, ObjLocationType.WIELD) == False:
+    if check_flag(object.template.wear_flags, ObjWearFlags.WIELD) == False:
         send_message(player, "You can't wield that.\n")
         return
     
-    player.wield(object)
+    msg = player.wield(object)
+    send_message(player, msg)
     
 
 def player_movement(player, direction):
