@@ -9,6 +9,8 @@ PyMUD is a MUD codebase written from scratch in Python.
 Inspiration for it comes from MUDs originally based on 
 the Diku/Merc however the code it is all original
 
+Built with Python v3.12.1
+
 == Folder Structure
 
 ./          source code (*.py)
