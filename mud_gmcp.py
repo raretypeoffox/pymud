@@ -3,7 +3,7 @@ import json
 
 from mud_shared import log_error, log_info
 from mud_comms import handle_disconnection
-from mud_consts import Exits, RoomSectorType
+from mud_consts import Exits, RoomSectorType, DISCORD_APPLICATION_ID, DISCORD_URL
 
 # Telnet constants - see https://tools.ietf.org/html/rfc854
 TELNET_IAC = b'\xff'
@@ -112,6 +112,8 @@ def handle_gmcp_negotiation(data, player):
     if data[:3] == TELNET_WILL_SUPPORT + TELNET_GMCP:  
         player.gmcp = PlayerGMCP(player)
         log_info(f"Player {player.fd} supports GMCP")
+        player.gmcp.queue_message("External", "Discord.Info", {'inviteurl': DISCORD_URL, 'applicationid': DISCORD_APPLICATION_ID})
+       
     elif data[:3] == TELNET_WONT_SUPPORT + TELNET_GMCP:  
         player.gmcp = None
         log_info(f"Player {player.fd} does not support GMCP")
@@ -163,7 +165,16 @@ def process_gmcp_message(player, package, message, data):
             player.gmcp.update_status()
         elif package == "Room":
             player.gmcp.update_room()
-            
+    elif package == "External":
+        log_info("External message received")
+        process_gmcp_discord_message(player, message, data)
+           
+def process_gmcp_discord_message(player, message, data):
+    if message == "Discord.Hello":
+        log_info("Discord.Hello received")
+        player.queue_message("External", "Discord.Info", {'inviteurl': DISCORD_URL, 'applicationid': DISCORD_APPLICATION_ID})
+        
+ 
 def send_gmcp_messages(players):
     for player in players:
         if player.gmcp:
