@@ -51,6 +51,21 @@ def send_room_message_processing(player, target, msg):
     
 
 def send_room_message(room, msg, excluded_player=None, excluded_msg=None):
+    """
+    Sends a message to all players in a room, excluding specified players.
+
+    This function iterates over all players in the given room and sends them the message. 
+    If a player is in the excluded_player list, they receive the corresponding excluded_msg instead of the main message.
+
+    Args:
+        room (Room): The room where the message should be sent.
+        msg (str): The message to be sent.
+        excluded_player (Player or list of Player, optional): A player or list of players who should not receive the main message. Defaults to None.
+        excluded_msg (str or list of str, optional): A message or list of messages to be sent to the excluded players. Defaults to None.
+
+    Returns:
+        None
+    """
     if not isinstance(excluded_player, list):
         excluded_player = [excluded_player]
     if isinstance(excluded_msg, str):
@@ -80,6 +95,19 @@ def send_global_message(msg):
             send_message(player, msg)
         
 def send_message(player, msg):
+    """
+    Sends a message to a specific player.
+
+    This function checks if the player's character is not an NPC, and if so, appends the message to the player's output buffer.
+    The actual sending of the message is handled elsewhere (in the process_output function).
+
+    Args:
+        player (Player): The player to whom the message should be sent.
+        msg (str): The message to be sent.
+
+    Returns:
+        None
+    """
     if player.character is not None and player.character.NPC is True:
         return
     player.output_buffer += msg

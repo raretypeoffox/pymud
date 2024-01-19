@@ -2,9 +2,14 @@
 
 from enum import Enum
 
-SERVER_LOG = "server_log.txt"
+SERVER_LOG = "log/server_log.txt"
 MOTD_FILE = "config/motd.txt"
 BANLIST = "config/banlist.txt"
+
+DATABASE_FOLDER = "database"
+USER_DATABASE = 'user_database.db'
+PLAYER_DATABASE = 'player_database.db'
+OBJECT_DATABASE = 'object_database.db'
 
 Greeting = """
                         /\\

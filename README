@@ -1,0 +1,142 @@
+PyMUD v0.0.1
+January 2024
+
+raretypeoffox / Vagonuth
+
+== Introduction
+
+PyMUD is a MUD codebase written from scratch in Python.
+Inspiration for it comes from MUDs originally based on 
+the Diku/Merc however the code it is all original
+
+== Folder Structure
+
+./          source code (*.py)
+./config    server config files
+./database  sqlite db files (initially empty)
+./log       log files (initially empty)
+./world     area / zone files
+
+== How to run
+
+python mud_server.py [port optional, default 4000]
+
+== Summary of the source code:
+
+mud_abilities.py - handles skills and spells learning and levelup
+mud_combat.py - handles melee combat
+mud_comms.py - handles processing messages to players and player login/char creation
+mud_consts.py - where constant data is stored
+mud_gmcp.py - implements GMCP
+mud_handler.py - processes the player's command input
+mud_mprog.py - handles mob specific behavour
+mud_objects.py - the main data structure and methods for players, mobs, objects and resets
+mud_password.py - checks/creates user password on login
+mud_server.py - starts up the server and contains the game_loop
+mud_shared.py - common functions that any other .py file can use
+mud_socials.py - handles the players social commands
+mud_spells.py - handles spellcasting
+mud_ticks.py - handles timed events
+mud_world.py - loads and parses the world .are files into the template managers
+
+== Most Important Data Structures
+
+mud_objects.py:
+    PlayerDatabase - save files for players
+    ObjectDatabase - save files for objects to be saved (eg on players)
+
+    PlayerManager - player_manager instance contains all the players currently connected
+    Player - every client gets an instance, contains all their connectively and gameplay data
+
+    Character - main character data (note, Mob's also get this class)
+    Inventory - players / mobs inventory
+    Equipment - players / mobs equipped items
+
+    MobTemplate - the mob data loaded from the .are files to a template
+    ObjectTemplate - the object data loaded from the .are files to a template
+
+    Room - the room instances, loaded directly from the .are files
+
+    MobInstance - the individual mobs in the game
+    ObjectInstance - the individual objects in the game
+
+    Resets - manages the area reset/repop process
+
+    CombatManager - tracks who's in combat with who
+
+== Most Important Functions
+
+build_world         # loads all the .are file (note: compatable with diku/merc .are files)
+game_loop           # loops continiously containing the main game logic, see next section
+handle_player       # process player commands (eg look)
+tick_loop / mini_tick_loop  # manages commonly used timed events (eg regen)
+do_cast             # casts a spell
+
+== Often Used Fucntions
+
+# send messages to players
+send_message(player, message)
+send_room_message(room, msg, excluded_player=None, excluded_msg=None)
+
+# characters room instance
+player.current_room, mob.current_room -- reference the current room
+
+# handling player input
+## takes the first argument a player gives and puts it in arg1, puts the remainder in arg2
+## arguments in quotes are counted as a single argument, eg
+## command = give, argument = 'red cloak' player
+## splits into arg 1 = "red cloak", arg2 = "player"
+arg1, arg2 = parse_argument(argument)
+
+# search for a target (eg look, give, kill, cast etc)
+## note multiple set of items can be inputed via a pipe |
+## for example: search_items((room.get_players() | room.get_mobs()), target_name)
+## returns the instance found, None is not found
+## is able to process the X. format, eg target_name of "2.mobname" would find the 2nd mob
+search_items(set_of_instances, keyword)
+
+# log to server output window / log file
+log_info(msg) / log_error(msg)
+
+== Overview of game start / loop
+
+mud_server.py:
+    main() launches the following before starting the game loop:
+        
+        # parse all of the .are files in world and loads them into the template managers and the reset manager
+        build_world() 
+
+        # loads all of the rooms, mobs, and objects from the template managers into the world
+        reset_world()
+
+        # loads all of the saved objects (eg on players) into the world
+        build_objects()
+
+        # starts up the server, which them calls game_loop
+        start_server()
+
+    game_loop() is the main loop for the game and will run until the server is shutdown.
+    note that the MUD has been designed as single threaded with non-blocking sockets
+    The game_loop works in the following way:
+
+        iterate over every socket:
+            check for new connections and pass them over to handle_new_client() (mud_comms.py)
+                on connection, a socket will be assigned a Player instance
+            existing connections, read the input data to player_data[player]
+                if the client has sent us GMCP data, pass over to mud.gmcp.py for processing
+
+        iterate over every player:
+            if the player is already loggedin:
+                pass the input to handle_player (mud_handler.py) which handles all player cmds
+            if the player is not loggedin:
+                pass the input to handle_client_login (mud_comms.py)
+
+        iterate over every player and send them their output_buffer (via process_output())
+
+        call the main game logic function, update_game_state() which does following
+            - every 2 seconds, processes a round of combat
+            - checks a number of timed events, eg ticks, via timed_events() (mud_ticks.py)
+
+        sends any gmcp messages to the players then briefly waits before looping again
+
+

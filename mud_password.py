@@ -4,8 +4,10 @@ import hashlib
 import os
 import sqlite3
 
+from mud_consts import DATABASE_FOLDER, USER_DATABASE
+
 # Global connection and cursor
-conn = sqlite3.connect('user_database.db')
+conn = sqlite3.connect(DATABASE_FOLDER + "/" + USER_DATABASE)
 cursor = conn.cursor()
 
 # Create the table if it doesn't exist

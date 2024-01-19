@@ -1516,8 +1516,9 @@ class CombatManager:
             return False
 
 # Init Global databases
-player_db = PlayerDatabase('player_database.db')
-object_db = ObjectDatabase('object_database.db')
+from mud_consts import DATABASE_FOLDER, PLAYER_DATABASE, OBJECT_DATABASE
+player_db = PlayerDatabase(DATABASE_FOLDER + "/" + PLAYER_DATABASE)
+object_db = ObjectDatabase(DATABASE_FOLDER + "/" + OBJECT_DATABASE)
 
 # Init Player Manager
 player_manager = PlayerManager()
