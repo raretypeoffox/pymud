@@ -907,7 +907,7 @@ class Room:
                 count_per_exit[exit] = 0
                 msg += f"{first_to_upper(Exits.get_name_by_value(exit)): <10}"
                 if self.doors[exit]["description"] != "":
-                    msg += f"({self.doors[exit]["description"]})"
+                    msg += f"({self.doors[exit]['description']})"
                 msg += "\n"
                 for player in room_manager.get(self.doors[exit]["to_room"]).player_list:
                     position_str = "."

@@ -252,7 +252,7 @@ def look_command(player, argument):
     if argument == '': # standard look around the room
         if room is not None:
             exit_names = "[Exits: " + room.get_exit_names() + "]"
-            send_message(player, f"{colourize(room.name,"yellow")}\n{exit_names}\n{room.description}\n")
+            send_message(player, f"{colourize(room.name,'yellow')}\n{exit_names}\n{room.description}\n")
             
             object_names = room.get_object_names()
             if object_names != '':
