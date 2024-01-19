@@ -199,6 +199,15 @@ class BaseEnum(Enum):
             raise ValueError(f"{value} is not a valid value for {cls.__name__}")
         return member
       
+class BitEnum(BaseEnum):
+    def check(self, input_integer):
+        return bool(self.value & int(input_integer))
+
+# BitEnum allows us to do things like: ObjWearFlags.TAKE.check(1) and get True
+# haven't decided if I want to switch to that convention yet.
+# if I delete BitEnum, rename all the BitEnum to BaseEnum 
+ 
+      
 class Exits(BaseEnum):
     NORTH = 0
     EAST = 1
@@ -230,22 +239,7 @@ class ObjType(BaseEnum):
   FOUNTAIN = 25
   PILL = 26
   
-  # obj extra flags
-#define ITEM_GLOW		      1
-#define ITEM_HUM		      2
-#define ITEM_DARK		      4
-#define ITEM_LOCK		      8
-#define ITEM_EVIL		     16
-#define ITEM_INVIS		     32
-#define ITEM_MAGIC		     64
-#define ITEM_NODROP		    128
-#define ITEM_BLESS		    256
-#define ITEM_ANTI_GOOD		    512
-#define ITEM_ANTI_EVIL		   1024
-#define ITEM_ANTI_NEUTRAL	   2048
-#define ITEM_NOREMOVE		   4096
-#define ITEM_INVENTORY		   8192
-class ObjExtraFlags(BaseEnum):
+class ObjExtraFlags(BitEnum):
   GLOW = 1
   HUM = 2
   DARK = 4
@@ -260,10 +254,8 @@ class ObjExtraFlags(BaseEnum):
   ANTI_NEUTRAL = 2048
   NOREMOVE = 4096
   INVENTORY = 8192
-  
-  
-  
-class ObjWearFlags(BaseEnum):
+   
+class ObjWearFlags(BitEnum):
   TAKE = 1
   WEAR_FINGER = 2
   WEAR_NECK = 4
@@ -280,7 +272,7 @@ class ObjWearFlags(BaseEnum):
   WIELD = 8192
   HOLD = 16384
   
-class EquipSlots(Enum):
+class EquipSlots(BitEnum):
     LIGHT = 1
     FINGER = 2
     NECK = 4
@@ -335,7 +327,7 @@ class ObjState(BaseEnum):
   PC_CONTAINER = 7 # For items placed in containers within the players inventory, will save and not imp
   OTHER_CONTAINER = 8 # For items placed in containers, won't save but won't imp (unless container imps)
   
-class ObjLocationType(BaseEnum):
+class ObjLocationType(BitEnum):
   PLAYER = 0
   ROOM = 1
   MOB = 2
@@ -343,13 +335,13 @@ class ObjLocationType(BaseEnum):
   OTHER_CONTAINER = 4
   
 
-class MobActFlags(BaseEnum):
+class MobActFlags(BitEnum):
     SENTINEL = 2
     SCAVENGER = 4
     AGGRESSIVE = 32
     WIMPY = 128 
 
-class RoomFlags(BaseEnum):
+class RoomFlags(BitEnum):
     DARK = 1
     HAVEN = 2
     NO_MOB = 4
