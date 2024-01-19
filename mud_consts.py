@@ -11,6 +11,10 @@ USER_DATABASE = 'user_database.db'
 PLAYER_DATABASE = 'player_database.db'
 OBJECT_DATABASE = 'object_database.db'
 
+# move to config file later
+DISCORD_URL = "https://discord.gg/pzqYzzTh"
+DISCORD_APPLICATION_ID = "1198002700881756181"
+
 Greeting = """
                         /\\
                         ||
@@ -147,55 +151,8 @@ ORIGINS = [
   "Wandering Bard"
 ]
 
-# obj extra flags
-#define ITEM_GLOW		      1
-#define ITEM_HUM		      2
-#define ITEM_DARK		      4
-#define ITEM_LOCK		      8
-#define ITEM_EVIL		     16
-#define ITEM_INVIS		     32
-#define ITEM_MAGIC		     64
-#define ITEM_NODROP		    128
-#define ITEM_BLESS		    256
-#define ITEM_ANTI_GOOD		    512
-#define ITEM_ANTI_EVIL		   1024
-#define ITEM_ANTI_NEUTRAL	   2048
-#define ITEM_NOREMOVE		   4096
-#define ITEM_INVENTORY		   8192
 
 
-
-
-
-
-
-
-
-
-
-
-  
-
-#define ITEM_LIGHT		      1
-#define ITEM_SCROLL		      2
-#define ITEM_WAND		      3
-#define ITEM_STAFF		      4
-#define ITEM_WEAPON		      5
-#define ITEM_TREASURE		      8
-#define ITEM_ARMOR		      9
-#define ITEM_POTION		     10
-#define ITEM_FURNITURE		     12
-#define ITEM_TRASH		     13
-#define ITEM_CONTAINER		     15
-#define ITEM_DRINK_CON		     17
-#define ITEM_KEY		     18
-#define ITEM_FOOD		     19
-#define ITEM_MONEY		     20
-#define ITEM_BOAT		     22
-#define ITEM_CORPSE_NPC		     23
-#define ITEM_CORPSE_PC		     24
-#define ITEM_FOUNTAIN		     25
-#define ITEM_PILL		     26
 
 
 
@@ -272,6 +229,38 @@ class ObjType(BaseEnum):
   CORPSE_PC = 24
   FOUNTAIN = 25
   PILL = 26
+  
+  # obj extra flags
+#define ITEM_GLOW		      1
+#define ITEM_HUM		      2
+#define ITEM_DARK		      4
+#define ITEM_LOCK		      8
+#define ITEM_EVIL		     16
+#define ITEM_INVIS		     32
+#define ITEM_MAGIC		     64
+#define ITEM_NODROP		    128
+#define ITEM_BLESS		    256
+#define ITEM_ANTI_GOOD		    512
+#define ITEM_ANTI_EVIL		   1024
+#define ITEM_ANTI_NEUTRAL	   2048
+#define ITEM_NOREMOVE		   4096
+#define ITEM_INVENTORY		   8192
+class ObjExtraFlags(BaseEnum):
+  GLOW = 1
+  HUM = 2
+  DARK = 4
+  LOCK = 8
+  EVIL = 16
+  INVIS = 32
+  MAGIC = 64
+  NODROP = 128
+  BLESS = 256
+  ANTI_GOOD = 512
+  ANTI_EVIL = 1024
+  ANTI_NEUTRAL = 2048
+  NOREMOVE = 4096
+  INVENTORY = 8192
+  
   
   
 class ObjWearFlags(BaseEnum):

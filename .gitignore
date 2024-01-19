@@ -1,6 +1,7 @@
 server_log.txt
 test.py
 *.db
+*.png
 db_operations.py
 
 __pycache__/
