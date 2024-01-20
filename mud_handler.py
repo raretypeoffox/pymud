@@ -169,7 +169,11 @@ def goto_command(player, argument):
     if argument == '':
         send_message(player, "You must specify a room number.\n")
     else:
-        room_id = int(argument)
+        try:
+            room_id = int(argument)
+        except ValueError:
+            send_message(player, "You must specify a room number.\n")
+            return
         room = room_manager.get(room_id)
 
         if room is None:
