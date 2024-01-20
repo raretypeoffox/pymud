@@ -1,0 +1,493 @@
+#AREA	{ 5 12} Gamaroch Ruined Keep~
+
+#MOBILES
+
+#0
+
+#OBJECTS
+
+#0
+
+#ROOMS
+#3200
+Crumbled Courtyard~
+The once-grand courtyard is now a tangle of broken stone pavers and bare earth. Towering remnants of the outer walls loom overhead, their stones bearing scars from some long-forgotten siege. Skeletal remains are scattered amidst the debris, and a dry, crumbling fountain stands as a solemn centerpiece.
+~
+3200 8192 0
+D0
+~
+~
+0 0 3203
+D1
+~
+~
+0 0 3202
+D2
+~
+~
+0 0 3116
+D3
+~
+~
+0 0 3201
+S
+#3201
+A Ruined Alcove~
+A narrow alcove adjacent the courtyard is flanked by crumbling stone walls. Patches of bare earth break through the stone pavers, evidence of nature reclaiming its territory. A skeletal hand reaches out from a hidden recess, pointing towards a collapsed archway.
+~
+3200 8192 0
+D1
+~
+~
+0 0 3200
+S
+#3202
+Mossy Overlook~
+Atop a section of ruined walls, moss-covered stones provide a precarious vantage point. The ground below is a mosaic of stone and bare earth. In the nearby courtyard, an ancient well stands, its mossy exterior concealing untold secrets. Debris and skeletal remains suggest this was once a guard post.
+~
+3200 8192 0
+D0
+~
+~
+0 0 3204
+D3
+~
+~
+0 0 3200
+S
+#3203
+Cracked Rampart~
+A crumbling rampart overlooks the surrounding wilderness. The stone walls are marred with cracks, and the stone pavers beneath your feet are uneven. A fallen soldier's skeletal hand clutches a rusted sword, the remnants of a last stand.
+~
+3200 8192 0
+D1
+~
+~
+0 0 3204
+D2
+~
+~
+0 0 3200
+S
+#3204
+Desolate Archway~
+A grand archway, now barely standing, marks the entrance to a desolate keep. The stone pavers have given way to a patchwork of bare earth. Within the shadows, skeletal remains suggest that some ill-fated souls sought refuge here. A forgotten inscription on the archway speaks of ancient alliances, the bronze plaque faded and pockmarked from long ago battles.
+~
+3200 8192 0
+D0
+~
+~
+0 0 3205
+D2
+~
+~
+0 0 3202
+D3
+~
+~
+0 0 3203
+S
+#3205
+Fading Bastion~
+The remnants of a bastion rise defiantly amidst the ruined walls. Stone pavers lead to the edge, where a sheer drop reveals the sprawling landscape below. A broken ballista rests nearby, surrounded by skeletal archers who perhaps once defended this strategic point.
+~
+3200 8192 0
+D1
+~
+~
+0 0 3206
+D2
+~
+~
+0 0 3204
+S
+#3206
+The Antechamber~
+You find yourself in a weathered antechamber, a transitional space leading to the grand entrance of the keep. The stone floor, worn smooth by the footsteps of bygone warriors, gives way to patches of bare earth where moss and weeds have taken root. The air is heavy with the scent of ancient dust.
+
+Before you, the grandeur of the keep entrance unfolds. The remnants of a once-mighty gate stand as a colossal sentinel-its splintered timbers and massive iron hinges betraying a history of siege and conflict. Beyond, the imposing walls of the keep rise like ancient sentinels, scarred by the trials of time and echoes of forgotten battles. Vines cling desperately to the weathered stones, whispering tales of a once-unyielding fortress now embraced by the encroaching wilderness.
+
+In the corners of the chamber, skeletal remains of fallen defenders lay undisturbed, their silent testament to the struggles that unfolded in the shadow of the keep's formidable walls. The archway behind you frames a view of the ruined walls, a fading memory of the journey that brought you to this pivotal threshold.
+~
+3200 8192 0
+D1
+~
+~
+0 0 3207
+D3
+~
+~
+0 0 3205
+S
+#3207
+Grand Entry Hall~
+Passing through the shattered remnants of the grand gate, you step into a vast entry hall that once welcomed dignitaries. The air hangs heavy with an ancient stillness as sunlight filters through cracks in the fortified walls, casting ethereal beams upon the worn cobblestone floor. Towering stone columns flank the lengthy passage, bearing witness to the grandeur that has long since faded. Tattered tapestries and a broken chandelier tell tales of bygone processions and celebrations, now rendered silent in the melancholic expanse of the keep's history.
+~
+3200 8192 0
+D0
+~
+~
+0 0 3208
+D3
+~
+~
+0 0 3206
+S
+#3208
+Vestibule to the Courtyard~
+Exiting the grand entry hall, you step into a spacious vestibule that serves as a gateway to the inner sanctum of the keep. Tattered banners, remnants of a bygone era, hang from the lofty ceiling. The stone floor, polished by the footsteps of dignitaries and warriors alike, leads towards a massive archway that frames the courtyard beyond.
+
+As you traverse the vestibule, the atmosphere transforms. Sunlight spills through the archway, revealing the courtyard's weathered grandeur. The distant echoes of the courtyard's tales beckon, and the air, once heavy with history, now carries a sense of anticipation. Stone pillars stand as sentinels, their carvings weathered but still telling stories of triumphs and tribulations. The courtyard's aura unfolds before you, promising further exploration into the heart of the ancient keep.
+~
+3200 8192 0
+D0
+~
+~
+0 0 3209
+D2
+~
+~
+0 0 3207
+S
+#3209
+Courtyard Transition Chamber~
+Stepping through the vestibule, the transition chamber unfolds with archways to the west and east, revealing views of the ivy-cloaked bastion and silent sentinel nook, each guarded by their respective watch posts. The stone floor beneath your feet transforms into a mosaic of cobblestones, symbolizing the diverse tales within the keep's history. A tattered tapestry hangs precariously, depicting the courtyard in its prime, while a broken war axe lies forgotten on the ground-its presence hinting at a turbulent past. Nature's whispers blend with the sanctuary's hallowed silence, beckoning exploration into the heart of the ancient keep.
+~
+3200 8192 0
+D0 
+~
+~
+0 0 3213
+D1
+~
+~
+0 0 3211
+D2
+~
+~
+0 0 3208
+D3
+~
+~
+0 0 3210
+S
+#3210
+Southwestern Guard Post~
+In the southwest corner, the entrance to a guard post is concealed within a quiet alcove. The air is hushed, and the stone walls bear witness to a stoic sentinel's duty. The skeletal remains of ancient guardians lie as silent sentinels, their memories entwined with the history of the keep.
+~
+3200 8192 0
+D0
+~
+~
+0 0 3212
+D1
+~
+~
+0 0 3209
+D4
+~
+~
+0 0 3218
+S
+#3211
+Southeastern Guard Post~
+In the southeast corner, a guard post entrance lies shrouded within a serene alcove. The air hangs in quiet suspense, and the ancient stone walls bear witness to the silent vigil of unseen sentinels. Within this enigmatic chamber, whispers of recent encounters linger, evidenced by the enigmatic presence of a recently deceased rat on the ground-a cryptic testament to the mysterious currents intertwining with the keep's haunting history.
+~
+3200 8192 0
+D0
+~
+~
+0 0 3214
+D3
+~
+~
+0 0 3209
+D4
+~
+~
+0 0 3219
+S
+#3212
+West Keep Wall~
+In the westernmost part of the courtyard there lies twin wooden doors, one mostly intact, another badly damaged and barely hanging from its hinges. The doors look to provide access to a dark hallway.
+~
+3200 8192 0
+D0
+~
+~
+0 0 3215
+D1
+~
+~
+0 0 3213
+D2
+~
+~
+0 0 3210
+D3
+~
+~
+0 0 3221
+S
+#3213
+A Derelict Fountain~
+Centrally positioned within the courtyard, this opulent fountain, once heralded as the pinnacle of elegance, now laid to rest amidst decay. The edges of the fountain shattered and ruined yet still standing. Stone benches, worn and cracked, surround the focal point, creating a melancholic atmosphere in this once-thriving heart of the keep.
+~
+3200 8192 0
+D0
+~
+~
+0 0 3216
+D1
+~
+~
+0 0 3214
+D2
+~
+~
+0 0 3209
+D3
+~
+~
+0 0 3212
+S
+#3214
+East Keep Wall~
+Along the eastern keep wall, a shadowed chamber exudes an air of mystery. A battered doorway surely once barricaded with large doors now stands open and exposed. Beyond the doorway appears to be a long and dimly lit hallway. A cool breeze emanates from the hallway, perhaps serving as a subtle admonition to proceed carefully.
+~
+3200 8192 0
+D0
+~
+~
+0 0 3217
+D1
+~
+~
+0 0 3214
+D2
+~
+~
+0 0 3211
+D3
+~
+~
+0 0 3213
+S
+#3215
+Northwestern Guard Post~
+Nestled in the northwest corner of the courtyard, the entrance to the guard post is shielded by the winding vines, leading up to the watchtower. Within, remnants of a once-vigilant outpost resonate with the whispers of bygone sentinels, whose presence is felt in the air, silently observing the courtyard beyond.
+~
+3200 8192 0
+D1
+~
+~
+0 0 3216
+D2
+~
+~
+0 0 3212
+D4
+~
+~
+0 0 3220
+S
+#3216
+Before The Tower~
+At the northernmost edge of the courtyard stands a looming tower featuring obsidian patterns inset within the stone walls. An iron gate stands ajar, providing access to a spiral staircase leading up into the tower. A low ominous wailing can faintly be heard over the breeze.
+~
+3200 8192 0
+D1
+~
+~
+0 0 3217
+D2
+~
+~
+0 0 3213
+D3
+~
+~
+0 0 3215
+S
+#3217
+Northeastern Guard Post~
+The northeast corner harbors the entrance to a guard post, its stone walls embraced by clinging vines of ivy. The stone stairs to the upper level have been completely destroyed, rendering the structure useless.
+~
+3200 8192 0
+D2
+~
+~
+0 0 3214
+D3
+~
+~
+0 0 3216
+S
+#3218
+Upper Level of the Southwestern Guard Post~
+This is a chamber adorned with stone walls and floors. Narrow windows punctuate the perimeter, offering protection for archers and vantage points for sentries. To the southwest lies a vast forest, and beyond that, the distant ocean crashes against the rocky shoreline. Eerie silence permeates the chamber and sends a shiver down your spine.
+~
+3200 8192 0
+D5
+~
+~
+0 0 3210
+S
+#3219
+Upper Level of the Southeastern Guard Post~
+The eastern wall of this chamber is destroyed, leaving it exposed to the elements. To the east, a dense wooded area unfolds, though details remain obscured. Rotten planks of wood propped up against the walls, blocking the view from the narrow windows on all sides.
+~
+3200 8192 0
+D5
+~
+~
+0 0 3211
+S
+#3220
+Upper Level of the Northwestern Guard Post~
+This chamber is adorned with stone walls and floors, although the stone floor gives way in some areas to holes.Windows on all sides offer protection for archers and observation points for sentries. A vast mountain range, its peaks blanketed in snow, unfolds to the north. From the southeast-facing window, a glint catches the eye-a mysterious shine emanating from the ruined courtyard fountain.
+~
+3200 8192 0
+D5
+~
+~
+0 0 3215
+S
+#3221
+A Dimly Lit Hallway~
+Walls of stone and a wooden plank floor greet you as you enter the hallway from the Keep’s courtyard. Cobwebs drape from the ceiling and a few books and parchments are scattered on the floor.
+~
+3200 8192 0
+D0
+~
+~
+0 0 3222
+D1
+~
+~
+0 0 3212
+S
+#3222
+A Hallway~
+The floor in this section of the hallway has numerous broken planks, exposing patches of bare earth below. Sword slashes etch chaotic patterns on the stone walls.
+~
+3200 8192 0
+D0
+~
+~
+0 0 3223
+D2
+~
+~
+0 0 3221
+S
+#3223
+A Corner~
+Partially obstructed by barrels and wooden crates, the dim hallway veers westward. The floor echoes with the skittering of rats, swiftly darting away from your presence.
+~
+3200 8192 0
+D2
+~
+~
+0 0 3222
+D3
+~
+~
+0 0 3224
+S
+#3224
+A Corner~
+As the hallway bends northward, a nauseating odor assaults your senses, momentarily stunning you. 
+
+What is that smell?..
+~
+3200 8192 0
+D0
+~
+~
+0 0 3225
+D1
+~
+~
+0 0 3223
+S
+#3225
+A Narrow Hallway~
+The hallway narrows again and shadows dance on the stone walls as if whispering tales of hope and despair. The wooden plank floor creaks beneath your steps, adding an eerie cadence that reverberates off the stone walls.
+~
+3200 8192 0
+D0
+~
+~
+0 0 3226
+D2
+~
+~
+0 0 3224
+S
+#3226
+A Candlelit Intersection~
+The hallway widens as it intersects with another, the air heavy with the scent of burning candles. An ornate mirror reflects a flickering glow, creating an ethereal ambiance. Cobwebs cling to the corners, and a sense of both decay and enduring hope lingers.
+
+A sturdy wooden door to the east piques your interest.
+~
+3200 8192 0
+D1
+~
+~
+0 0 3227
+D2
+~
+~
+0 0 3225
+D3
+~
+~
+0 0 3228
+S
+#3227
+Storage Room~
+Barrels and crates, covered in a thick layer of dust, hold forgotten supplies. A glint of metal catches your eye as you notice an old suit of armor, abandoned and rusting in a corner. On the far wall, a large iron chest sits slightly ajar. Maybe it can be pried open..
+~
+3200 8192 0
+D3
+
+~
+~
+0 0 3226
+S
+#3228
+Entrance to the Dungeons~
+To the south, a secure iron gate remains firmly locked. Adjacent to it, a wall-mounted wooden rack displays an array of keys. To the side, a small desk and a toppled chair reside in disarray, surrounded by scattered iron shackles strewn across the floor.
+~
+3200 8192 0
+D1
+~
+~
+0 0 3226
+D2
+~
+~
+0 0 3228
+S
+
+#0
+
+#RESETS
+
+S
+
+
+
+#SHOPS
+
+0
+
+
+
+#SPECIALS
+
+S
+
+
+#$
