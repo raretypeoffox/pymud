@@ -1,6 +1,70 @@
 #AREA	{20 25} Vagonuth Stonekin Mountains~
 
 #MOBILES
+#3400
+sleek mountian lynx~
+a sleek mountain lynx~
+A mountain lynx prowls here, its fur blending with the rocky terrain.
+~
+This mountain lynx is a master of stealth, its spotted fur camouflaging it among the rocks. Its eyes are sharp, and its muscles ripple under its sleek coat as it moves silently through its domain.
+~
+66 0 0 S
+21 4 15 18d10+10 4d4+2
+0 0
+0 0 1
+
+#3401
+venomous rock viper~
+a venomous rock viper~
+Coiled among the stones, a rock viper watches intently, ready to strike.
+~
+The rock viper's scales are a mosaic of gray and brown, providing perfect camouflage among the stones. Its eyes are dark slits, and its fangs glisten with venom, promising a deadly bite.
+~
+66 0 0 S
+20 5 13 18d10+10 4d4+2
+0 0
+0 0 1
+
+#3402
+mountain troll~
+a burly mountain troll~
+A mountain troll lumbers here, its heavy steps causing the ground to tremble.
+~
+This mountain troll's thick, leathery skin is covered in scars from countless battles. Its small, beady eyes glint with a mixture of curiosity and malice, and its massive hands could crush stone as easily as bone.
+~
+66 0 0 S
+25 2 12 25d10+20 3d8+2
+0 0
+0 0 1
+
+#3403
+cliffside harpy~
+a screeching cliffside harpy~
+With a piercing screech, a cliffside harpy circles overhead, eyeing potential prey.
+~
+The harpy's features are a terrifying blend of bird and woman, with sharp talons and even sharper eyes. Its screech sends shivers down your spine, and its wings cast ominous shadows on the ground below.
+~
+66 0 0 S
+23 4 15 20d10+10 4d4+3
+0 0
+0 0 1
+
+#3404
+stone elemental~
+a towering stone elemental~
+A stone elemental rises from the earth, its form both majestic and intimidating.
+~
+Composed entirely of rock and earth, the stone elemental is a force of nature personified. Its movements are slow but deliberate, each step resonating with the power of the mountain itself.
+~
+66 0 0 S
+25 4 15 22d10+10 5d4+4
+0 0
+0 0 1
+
+
+
+
+
 
 #0
 
@@ -225,6 +289,19 @@ S
 #0
 
 #RESETS
+
+M 0 3400 3 3402     (lynx)
+M 0 3400 3 3404     (lynx)
+M 0 3400 3 3406     (lynx)
+M 0 3401 2 3401     (viper)
+M 0 3401 2 3403     (viper)
+M 0 3402 1 3409     (troll)
+M 0 3403 2 3404     (harpy)
+M 0 3403 2 3407     (harpy)
+M 0 3404 2 3412     (elemental)
+M 0 3404 2 3414     (elemental)
+
+
 
 S
 
