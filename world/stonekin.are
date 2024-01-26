@@ -1,0 +1,244 @@
+#AREA	{20 25} Vagonuth Stonekin Mountains~
+
+#MOBILES
+
+#0
+
+#OBJECTS
+
+#0
+
+#ROOMS
+#3400
+Whisperwood Northern Exit~
+The path leading out of Whisperwood Hollow winds between ancient trees, their leaves whispering farewells. As you move northward, the trees gradually thin, revealing glimpses of the towering mountains ahead. The air grows cooler and the scent of pine and earth intensifies, marking the transition from the sheltered grove to the open wilderness.
+~
+3400 0 0
+D0
+~
+~
+0 0 3401
+D2
+~
+~
+0 0 3309
+S
+#3401
+Mountain Foothills~
+The terrain here changes dramatically, from the soft forest floor to the rugged foothills of the mountain range. Small, hardy bushes and trees cling to the rocky soil, and the path becomes steeper and more treacherous. Every so often, the sound of a distant rockslide echoes through the air, a reminder of the mountain's ever-changing nature.
+~
+3400 0 0
+D2
+~
+~
+0 0 3400
+D3
+~
+~
+0 0 3402
+S
+#3402
+Pine-Clad Slope~
+Tall pine trees dominate this part of the mountain, their needles carpeting the ground and filling the air with their sharp scent. The path here is a narrow, winding trail that threads through the dense forest, occasionally offering stunning views of the valley below through breaks in the foliage.
+~
+3400 0 0
+D1
+~
+~
+0 0 3401
+D4
+~
+~
+0 0 3403
+S
+#3403
+Rocky Ledge~
+The forest abruptly gives way to a rocky ledge, offering a breathtaking panorama of Whisperwood Hollow far below. The ledge is precarious, with loose stones and a sharp drop-off. The path forward hugs the mountainside, carved into the living rock, and continues to ascend towards the peaks.
+~
+3400 0 0
+D1
+~
+~
+0 0 3404
+D3
+~
+~
+0 0 3406
+D5
+~
+~
+0 0 3402
+S
+#3404
+Crystal Stream Crossing~
+A clear, icy stream cascades down from the mountain, crossing your path. The water is cold and refreshing, fed by snowmelt from higher elevations. Large, flat stones offer a way across the stream, though they are slick with moss and the rushing water threatens to unbalance the unwary.
+~
+3400 0 0
+D1
+~
+~
+0 0 3405
+D3
+~
+~
+0 0 3403
+S
+#3405
+Alpine Meadow~
+Surrounded by towering peaks, this secluded meadow is a splash of vibrant green amid the rugged landscape. Wildflowers bloom in abundance, their colors a stark contrast to the grey stone of the mountains. The air is crisp and filled with the sound of buzzing insects and the distant cry of birds of prey.
+~
+3400 0 0
+D3
+~
+~
+0 0 3404
+D4
+~
+~
+0 0 3410
+S
+#3406
+Stone Giant's Pass~
+Legend says that stone giants once walked these lands, and the massive boulders strewn across this pass lend credence to those tales. The path here is a labyrinth of stone, requiring careful navigation to avoid becoming hopelessly lost. The oppressive silence is broken only by the sound of your own footsteps.
+~
+3400 0 0
+D1
+~
+~
+0 0 3403
+D3
+~
+~
+0 0 3407
+S
+#3407
+Wind-Scoured Plateau~
+The path leads out onto a wide, flat plateau. The wind here is unrelenting, howling across the barren landscape and tugging at your clothing. Scrubby, wind-blasted bushes and the occasional gnarled tree are the only signs of life in this inhospitable place. The path continues north, skirting the edge of a steep cliff.
+~
+3400 0 0
+D1
+~
+~
+0 0 3406
+D4
+~
+~
+0 0 3408
+S
+#3408
+Cragkin's Rest~
+This tranquil clearing is surrounded by towering pines and weathered stones. At its center, a large, flat rock serves as a communal gathering spot, the surface worn smooth by countless Cragkin meetings. The air here is still, as if the land itself pauses to honor the memory of those who once called these mountains home.
+~
+3401 0 0
+D1
+~
+~
+0 0 3409
+D5
+~
+~
+0 0 3407
+S
+#3409
+Cragkin Ruins~
+The remains of what once was a Cragkin settlement lie scattered across this area. Stone structures, half-collapsed and overgrown with moss, tell a tale of a community that thrived in harmony with the mountain. Enigmatic carvings on the stones depict scenes of daily life, and the wind through the ruins seems to carry whispers of ancient Cragkin songs.
+~
+3401 0 0
+D1
+~
+~
+0 0 3412
+D3
+~
+~
+0 0 3408
+S
+#3410
+Granite Threshold~
+The Granite Threshold offers a dramatic transition from the subterranean depths to the airy heights. Here, rugged granite cliffs rise starkly against the sky, their surfaces a testament to the raw, sculpting forces of nature. The path is narrow, hemmed in by stoic boulders that seem to watch every traveler with ancient, unblinking eyes. Delicate mountain flowers stubbornly bloom in the crevices, their vibrant colors a stark contrast to the monochrome stone.
+~
+3401 0 0
+D3
+~
+~
+0 0 3411
+D5
+~
+~
+0 0 3405
+S
+#3411
+Echoing Cavern~
+A gaping cavern entrance beckons the daring. Inside, the cave extends into darkness, its walls smooth and worn by the touch of Cragkin hands. The air is cool and damp, and every sound echoes off the stone, magnifying until it seems a chorus of hidden voices joins in. Faint luminous markings guide the way deeper into the mountain's heart.
+~
+3401 0 0
+D1
+~
+~
+0 0 3410
+D3
+~
+~
+0 0 3412
+S
+#3412
+The Sentinels' Watch~
+Two massive stone figures, carved in the likeness of Cragkin warriors, stand guard over a narrow mountain pass. Their eyes, hollowed out by time, still seem to watch over the path with a protective gaze. The ground is littered with offerings; small tokens and stones left by travelers paying respect to the guardians of old.~
+3401 0 0
+D1
+~
+~
+0 0 3411
+D3
+~
+~
+0 0 3409
+D4
+~
+~
+0 0 3413
+S
+#3413
+Mountain Ascent~
+The climb becomes steeper and more perilous, the path zigzagging back and forth up the mountainside. Loose stones and gravel make the footing treacherous, and you must cling to the mountain face at times to avoid a dangerous fall. The air grows thinner and colder as you ascend into the clouds.
+~
+3402 0 0
+D4
+~
+~
+0 0 3414
+D5
+~
+~
+0 0 3412
+S
+#3414
+Cloudreach Summit~
+At the pinnacle of your climb, you stand atop Cloudreach Summit. The world stretches out below you, a vast panorama of forests, valleys, and distant lands. Above, the sky is a brilliant blue, and the sun shines with a fierce intensity. The summit is a place of quiet and profound solitude, the mountain seeming to hold its breath in awe.
+~
+3402 0 0
+D5
+~
+~
+0 0 3413
+S
+#0
+
+#RESETS
+
+S
+
+
+
+#SHOPS
+
+0
+
+
+
+#SPECIALS
+
+S
+
+
+#$

@@ -39,6 +39,8 @@ def process_victory(player, mob_level):
         # bonus num_dice for being under level 20
         if player.character.level < 20:
             low_level_bonus = (20 - player.character.level) // 4
+        else:
+            low_level_bonus = 0
         xp = dice_roll(num_dice  + low_level_bonus, 10, (num_dice * 5))
     else:
         xp = 0

@@ -311,7 +311,11 @@ def process_message(msg, player_name="", target_name=""):
 
 
 def handle_social(player, social, argument):
-        
+    
+    if player.character.is_awake() == False:
+        send_message(player, "You can't do that while sleeping!\n")
+        return False
+    
     if social not in SOCIALS:
         return False
     
